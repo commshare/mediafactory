@@ -352,7 +352,6 @@ int lts_ts_stream(TEsFrame *frame, uint8_t *dest, int maxlen, TsProgramInfo *pi)
 	int ret;
 	char *ptr = (char *)dest;
 	int patpmt_len = 0;
-
 	
 	if (!frame || !dest || !maxlen || !pi)
 	{

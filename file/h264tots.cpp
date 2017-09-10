@@ -58,6 +58,7 @@ int test264tompegts(char* h264path, char* tspath)
 		es.pts = 3600L * g_frame_count;		// 示例中按帧率为25fps累计时间戳。正式使用应根据帧实际的时间戳填写。
 		es.ps_pes_length = 8000;
 
+		printf("framelength %d \n",framelength);
 		int outlen = lts_ts_stream(&es, g_outbuf, BUF_SIZE, &g_prog_info);
 		if (outlen > 0)
 		{
@@ -65,6 +66,8 @@ int test264tompegts(char* h264path, char* tspath)
 		}
 
 		g_frame_count++;
+		if( framelength > 100 )
+			break;
 	}
 
 	fclose(g_out_fp);
