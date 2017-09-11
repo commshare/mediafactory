@@ -78,6 +78,32 @@ enum TSTYPE{
 #define TS_PACKET_SIZE 188
 #define TS_LOAD_LEN (188-12)
 
+// CRC32
+static uint32_t CRC_encode(const char* data, int len)
+{
+#define CRC_poly_32 0x04c11db7
+
+    int byte_count=0, bit_count=0;
+    uint32_t CRC = 0xffffffff;
+
+    while (byte_count < len)
+    {
+        if (((uint8_t)(CRC>>31)^(*data>>(7-bit_count++)&1)) != 0)
+            CRC = CRC << 1^CRC_poly_32;
+        else 
+            CRC = CRC << 1;
+
+        if (bit_count > 7)
+        {
+            bit_count = 0;
+            byte_count++;
+            data++;
+        }
+    }
+
+    return CRC;
+}
+
 /* @remark: 结构体定义 */  
 typedef struct  
 {  
@@ -222,6 +248,22 @@ int ts_header(char *buf, int pid, int payload_unit_start_indicator, int adaptati
     return bits.i_data;  
 }  
 
+int ts_writecrc(char *buf, uint32_t crc)
+{
+    BITS_BUFFER_S bits;  
+      
+    if (!buf)  
+    {  
+        return 0;  
+    }  
+    bits_initwrite(&bits, 32, (unsigned char *)buf);  
+  
+    bits_write(&bits, 32, crc);   
+
+    bits_align(&bits);  
+    return bits.i_data;  
+}
+
 int ts_pat_header(char *buf)  
 {  
     BITS_BUFFER_S bits;  
@@ -252,11 +294,13 @@ int ts_pat_header(char *buf)
     bits_write(&bits, 3, 0x07);             // reserved3和pmt_pid是一组，共有几个频道由program number指示  
     bits_write(&bits, 13, TS_PID_PMT);      // pmt of pid in ts head  
   
+/*
     bits_write(&bits, 8, 0x2a);             // CRC_32 先暂时写死  
     bits_write(&bits, 8, 0xb1);  
     bits_write(&bits, 8, 0x04);  
     bits_write(&bits, 8, 0xb2);  
-  
+*/
+
     bits_align(&bits);  
     return bits.i_data;  
 }  
@@ -305,9 +349,14 @@ int mk_ts_pat_packet(char *buf, int counter)
     if (0 >= (nRet = ts_pat_header(buf + nOffset)))  
     {  
         return 0;  
-    }  
+    }
+
+    uint32_t crc = CRC_encode(buf+nOffset, nRet);    
     nOffset += nRet;  
   
+    nRet = ts_writecrc(buf + nOffset, crc);
+    nOffset += nRet;  
+
     // 每一个pat都会当成一个ts包来处理，所以每次剩余部分用1来充填完  
     memset(buf + nOffset, 0xFF, TS_PACKET_SIZE - nOffset);  
     return TS_PACKET_SIZE;  
@@ -351,11 +400,6 @@ int ts_pmt_header(char *buf)
     bits_write(&bits, 4, 0x0F);             // reserved, 固定为0x0F  
     bits_write(&bits, 12, 0x00);            // elementary stream info length, 前两位bit为00  
   
-    bits_write(&bits, 8, 0x14);             //CRC_32    先暂时写死  
-    bits_write(&bits, 8, 0x65);  
-    bits_write(&bits, 8, 0xe1);  
-    bits_write(&bits, 8, 0xd1);  
-
     bits_align(&bits);  
     return bits.i_data;  
 }  
@@ -388,9 +432,14 @@ int mk_ts_pmt_packet(char *buf, int counter)
     if (0 >= (nRet = ts_pmt_header(buf + nOffset)))  
     {  
         return 0;  
-    }  
+    }
+
+    uint32_t crc = CRC_encode(buf+nOffset, nRet);    
     nOffset += nRet;  
   
+    nRet = ts_writecrc(buf + nOffset, crc);
+    nOffset += nRet;  
+
     // 每一个pmt都会当成一个ts包来处理，所以每次剩余部分用1来充填完  
     memset(buf + nOffset, 0xFF, TS_PACKET_SIZE - nOffset);  
     return TS_PACKET_SIZE;  
@@ -455,7 +504,7 @@ int mk_ts_data_packet(char *buf, int nFramelen, int bStart, int adaptionfield, i
         {
             adaptionlength = TS_PACKET_SIZE - 5 - nFramelen;
         }
-        printf("adaptionlength %d framelen %d \n", adaptionlength, nFramelen);
+//        printf("adaptionlength %d framelen %d \n", adaptionlength, nFramelen);
         nRet = ts_adaptation_field(buf + nOffset, adaptionlength, writepcr,timestamp);
         int tempOffset = nOffset + nRet;          
         memset(buf + tempOffset, 0xFF, TS_PACKET_SIZE - nOffset);  
@@ -544,7 +593,7 @@ int gb28181_es2tsForH264(const char* framedata, int nFrameLen, int keyframe, uin
     if( keyframe == 1)  
     {
         nRet = mk_ts_pat_packet(TSFrameHdr +nSendDataOff, pmtcounter);
-        printf("mk_ts_pat_packet %d \n", nRet);
+//        printf("mk_ts_pat_packet %d \n", nRet);
         if( nRet <= 0)      
         {  
             return -1;  
@@ -552,7 +601,7 @@ int gb28181_es2tsForH264(const char* framedata, int nFrameLen, int keyframe, uin
         nSendDataOff += nRet;  
 
         nRet = mk_ts_pmt_packet(TSFrameHdr + nSendDataOff, pmtcounter);      
-        printf("mk_ts_pmt_packet %d \n", nRet);
+//        printf("mk_ts_pmt_packet %d \n", nRet);
         if( nRet <= 0)      
         {
             return -1;  
@@ -572,7 +621,7 @@ int gb28181_es2tsForH264(const char* framedata, int nFrameLen, int keyframe, uin
     nRet = gb28181_make_pes_header(TSFrameHdr + nSendDataOff, 0xE0, nFrameLen, timestamp, timestamp);
     nSendDataOff += nRet;
     packetoffset += nRet;
-    printf("gb28181_make_pes_header %d %d\n", nRet, packetoffset);
+//    printf("gb28181_make_pes_header %d %d\n", nRet, packetoffset);
     if( nFrameLen <= (TS_PACKET_SIZE-6) )
     {
         memcpy(TSFrameHdr + nSendDataOff, framedata, nFrameLen);  
@@ -601,7 +650,7 @@ int gb28181_es2tsForH264(const char* framedata, int nFrameLen, int keyframe, uin
             nWriteSize = TS_PACKET_SIZE - nRet;  
             memcpy(TSFrameHdr + nSendDataOff,  framedata+frameoffset, nWriteSize);  
             frameoffset += nWriteSize;
-            printf("nWriteSize %d \n", nWriteSize);
+//            printf("nWriteSize %d \n", nWriteSize);
 
             nSendDataOff += nWriteSize;
             fsts.write(TSFrameHdr, nSendDataOff);
@@ -615,7 +664,7 @@ int gb28181_es2tsForH264(const char* framedata, int nFrameLen, int keyframe, uin
             nWriteSize = nFrameLen;  
             memcpy(TSFrameHdr + nSendDataOff,  framedata+frameoffset, nWriteSize);  
             frameoffset += nWriteSize;
-            printf("last nWriteSize %d \n", nWriteSize);
+//            printf("last nWriteSize %d \n", nWriteSize);
 
             nSendDataOff += nWriteSize;
             fsts.write(TSFrameHdr, nSendDataOff);
