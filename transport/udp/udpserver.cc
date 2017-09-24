@@ -13,7 +13,7 @@
 #include <mutex>
 #include <thread>
 
-#include "tcpserver.h"
+#include "udpserver.h"
 
 struct tcpclientdesc_t {
     int sockfd;
@@ -57,7 +57,7 @@ int setnonblocking(int sock)
     }
 }
 
-int tcp_server_eventloop(void* handle)
+int udp_server_eventloop(void* handle)
 {
     tcpserverdesc_t * inst = (tcpserverdesc_t*)handle;
 
@@ -215,7 +215,7 @@ int tcp_server_eventloop(void* handle)
     return 0;
 }
 
-void* tcp_server_new(const char* localip, int localport, on_connect_callback connectcallback, on_close_callback closecallback, void* userdata)
+void* udp_server_new(const char* localip, int localport, on_connect_callback connectcallback, on_close_callback closecallback, void* userdata)
 {
     tcpserverdesc_t * inst = new tcpserverdesc_t;
     if( !inst ) return NULL;
@@ -226,12 +226,12 @@ void* tcp_server_new(const char* localip, int localport, on_connect_callback con
     inst->closecallback = closecallback;
     inst->userdata = userdata;
 
-    inst->threadeventloop = std::thread(tcp_server_eventloop, (void*)inst);
+    inst->threadeventloop = std::thread(udp_server_eventloop, (void*)inst);
 
     return inst;
 }
 
-int tcp_server_read(void* handle, int clientid, char* data, int length)
+int udp_server_read(void* handle, int clientid, char* data, int length)
 {
     tcpserverdesc_t * inst = (tcpserverdesc_t*)handle;
 
@@ -262,7 +262,7 @@ int tcp_server_read(void* handle, int clientid, char* data, int length)
     return reallength;
 }
 
-int tcp_server_write(void* handle, int clientid, const char* data, int length)
+int udp_server_write(void* handle, int clientid, const char* data, int length)
 {
     tcpserverdesc_t * inst = (tcpserverdesc_t*)handle;
 
@@ -277,7 +277,7 @@ int tcp_server_write(void* handle, int clientid, const char* data, int length)
     return 0;
 }
 
-int tcp_server_close(void* handle, int clientid)
+int udp_server_close(void* handle, int clientid)
 {
     tcpserverdesc_t * inst = (tcpserverdesc_t*)handle;
 
@@ -293,7 +293,7 @@ int tcp_server_close(void* handle, int clientid)
     return 0;
 }
 
-int tcp_server_free(void* handle)
+int udp_server_free(void* handle)
 {
     tcpserverdesc_t * inst = (tcpserverdesc_t*)handle;
 

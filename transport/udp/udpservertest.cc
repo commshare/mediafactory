@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "tcpserver.h"
+#include "udpserver.h"
 
 int sockfd = -1;
 int myon_connect_callback(void* handle, int sockfd, void* userdata)
@@ -22,7 +22,7 @@ int myon_close_callback(void* handle, int sockfd, void* userdata)
 
 int main()
 {
-	void* handle = tcp_server_new("127.0.0.1", 11110, myon_connect_callback, myon_close_callback, NULL);
+	void* handle = udp_server_new("127.0.0.1", 11110, myon_connect_callback, myon_close_callback, NULL);
 
 //int tcp_server_write(void* handle, int sockfd, const char* data, int length);
 
@@ -30,7 +30,7 @@ int main()
 	while( 1 )
 	{
 		memset(buffer, 0, sizeof(buffer));
-		int ret = tcp_server_read(handle, sockfd, buffer, sizeof(buffer));
+		int ret = udp_server_read(handle, sockfd, buffer, sizeof(buffer));
 
 		if( ret > 0 )
 			printf("%s %d\n", buffer, ret);

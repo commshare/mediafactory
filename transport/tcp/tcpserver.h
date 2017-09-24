@@ -4,16 +4,16 @@
 #include <unistd.h>
 #include <stdio.h>
 
-typedef int (*on_connect_callback)(void* handle, int sockfd, void* userdata);
-typedef int (*on_close_callback)(void* handle, int sockfd, void* userdata);
+typedef int (*on_connect_callback)(void* handle, int clientid, void* userdata);
+typedef int (*on_close_callback)(void* handle, int clientid, void* userdata);
 
 void* tcp_server_new(const char* localip, int localport, on_connect_callback connectcallback, on_close_callback closecallback, void* userdata);
 
-int tcp_server_read(void* handle, int sockfd, char* data, int length);
+int tcp_server_read(void* handle, int clientid, char* data, int length);
 
-int tcp_server_write(void* handle, int sockfd, const char* data, int length);
+int tcp_server_write(void* handle, int clientid, const char* data, int length);
 
-int tcp_server_close(void* handle, int sockfd);
+int tcp_server_close(void* handle, int clientid);
 
 int tcp_server_free(void* handle);
 
