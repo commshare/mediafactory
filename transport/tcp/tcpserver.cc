@@ -11,6 +11,7 @@
 #include <string>
 #include <string.h>
 #include <mutex>
+#include <thread>
 
 #include "tcpserver.h"
 
@@ -35,6 +36,8 @@ struct tcpserverdesc_t {
     on_close_callback closecallback;
 
     void* userdata;
+    std::thread threadeventloop;
+
     TCPCLIENTMAP clients;
 };
 
@@ -52,20 +55,6 @@ int setnonblocking(int sock)
         perror("fcntl(sock,SETFL,opts)");
         return -1;
     }
-}
-
-void* tcp_server_new(const char* localip, int localport, on_connect_callback connectcallback, on_close_callback closecallback, void* userdata)
-{
-    tcpserverdesc_t * inst = new tcpserverdesc_t;
-    if( !inst ) return NULL;
-
-    inst->localip = localip;
-    inst->localport = localport;
-    inst->connectcallback = connectcallback;
-    inst->closecallback = closecallback;
-    inst->userdata = userdata;
-
-    return inst;
 }
 
 int tcp_server_eventloop(void* handle)
@@ -215,7 +204,23 @@ int tcp_server_eventloop(void* handle)
     return 0;
 }
 
-int tcp_server_read(void* handle, int sockfd, char* data, int length, int *reallength)
+void* tcp_server_new(const char* localip, int localport, on_connect_callback connectcallback, on_close_callback closecallback, void* userdata)
+{
+    tcpserverdesc_t * inst = new tcpserverdesc_t;
+    if( !inst ) return NULL;
+
+    inst->localip = localip;
+    inst->localport = localport;
+    inst->connectcallback = connectcallback;
+    inst->closecallback = closecallback;
+    inst->userdata = userdata;
+
+    inst->threadeventloop = std::thread(tcp_server_eventloop, (void*)inst);
+
+    return inst;
+}
+
+int tcp_server_read(void* handle, int sockfd, char* data, int length)
 {
     tcpserverdesc_t * inst = (tcpserverdesc_t*)handle;
 
@@ -223,26 +228,27 @@ int tcp_server_read(void* handle, int sockfd, char* data, int length, int *reall
     if( iter == inst->clients.end() )
         return -1;
 
+    int reallength = 0;
     iter->second->recvmutex.lock();
     if( iter->second->recvbuffer.size() <= 0 )
     {
-        *reallength = 0;
+        reallength = 0;
     }
     else if( iter->second->recvbuffer.size() <= length)
     {
-        *reallength = iter->second->recvbuffer.size();
+        reallength = iter->second->recvbuffer.size();
         memcpy(data, iter->second->recvbuffer.data(), iter->second->recvbuffer.size());
         iter->second->recvbuffer.clear();        
     }
     else
     {
-        *reallength = length;
+        reallength = length;
         memcpy(data, iter->second->recvbuffer.data(), length);
         iter->second->recvbuffer.erase(0, length);                
     }
     iter->second->recvmutex.unlock();
 
-    return 0;
+    return reallength;
 }
 
 int tcp_server_write(void* handle, int sockfd, const char* data, int length)

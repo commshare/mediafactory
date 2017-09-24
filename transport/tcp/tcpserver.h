@@ -9,9 +9,7 @@ typedef int (*on_close_callback)(void* handle, int sockfd, void* userdata);
 
 void* tcp_server_new(const char* localip, int localport, on_connect_callback connectcallback, on_close_callback closecallback, void* userdata);
 
-int tcp_server_eventloop(void* handle);
-
-int tcp_server_read(void* handle, int sockfd, char* data, int length, int *reallength);
+int tcp_server_read(void* handle, int sockfd, char* data, int length);
 
 int tcp_server_write(void* handle, int sockfd, const char* data, int length);
 
