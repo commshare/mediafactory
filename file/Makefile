@@ -11,7 +11,7 @@ TARGET5 = h264toflv
 TARGET6 = aactoflv
 TARGET7 = aactomp4
 TARGET8 = h264tots1
-TARGETS = $(TARGET) $(TARGET1) $(TARGET2) $(TARGET3) $(TARGET4) $(TARGET5) \
+TARGETS = $(TARGET0) $(TARGET1) $(TARGET2) $(TARGET3) $(TARGET4) $(TARGET5) \
 		$(TARGET6) $(TARGET7) $(TARGET8)
 
 OBJS = libh26x/h264demux.o libmp4/mp4mux.o libh26x/spspps.o \
