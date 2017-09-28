@@ -105,31 +105,57 @@ int accept_client(void* handle, int epollfd,int listenfd)
     struct sockaddr_in client_addr;  
     socklen_t addr_size = sizeof(client_addr);  
     char buf[2048] = {0};  
-    int ret = recvfrom(listenfd, buf,sizeof(buf), 0, (struct sockaddr *)&client_addr, &addr_size);  
-    //check(ret > 0, "recvfrom error");  
-    if( ret <= 0 )
+    while( 1 )
     {
-        return -1;
+        int ret = recvfrom(listenfd, buf,sizeof(buf), 0, (struct sockaddr *)&client_addr, &addr_size);  
+        //check(ret > 0, "recvfrom error");  
+        if( ret <= 0 )
+        {
+            perror("recvfrom error");
+            break;;
+        }        
+        std::string clientip = inet_ntoa(client_addr.sin_addr);
+        int clientport = ntohs(client_addr.sin_port);
+        std::cout << "recved from " << buf<< ret << std::endl;
+
+        if( !inst->clients.empty() )
+        {
+            UDPCLIENTMAP::iterator iter = inst->clients.begin();
+            for( ;iter != inst->clients.end(); ++iter )
+            {
+                if( iter->second->ip == clientip &&
+                    iter->second->port == clientport )
+                {
+                    iter->second->recvmutex.lock();
+                    iter->second->recvqueue.push_back(std::string(buf, ret));
+                    iter->second->recvmutex.unlock();
+
+                    break;
+                }
+            }        
+            if( iter != inst->clients.end() )
+                continue;
+        }
+
+        std::cout << "accapt a connection from " << clientip<<" "<<clientport << std::endl;
+        int new_sock=udp_socket_connect(handle, epollfd,(struct sockaddr_in*)&client_addr);  
+          
+        udpclientdesc_t *client = new udpclientdesc_t;
+        client->recvqueue.push_back(std::string(buf, ret));
+        client->sockfd = new_sock;
+        client->ip = clientip;
+        client->port = clientport;
+        inst->clients[new_sock] = client;
+
+        if( inst->connectcallback )
+            inst->connectcallback(inst, new_sock, inst->userdata);
+
+        //设置用于读操作的文件描述符
+        struct epoll_event ev;
+        ev.data.fd=new_sock;
+        ev.events=EPOLLIN|EPOLLET;
+        epoll_ctl(epollfd,EPOLL_CTL_ADD,new_sock,&ev);
     }
-
-    int new_sock=udp_socket_connect(handle, epollfd,(struct sockaddr_in*)&client_addr);  
-      
-    char *str = inet_ntoa(client_addr.sin_addr);
-    std::cout << "accapt a connection from " << str << " "<< buf<< ret << std::endl;
-    udpclientdesc_t *client = new udpclientdesc_t;
-    client->recvqueue.push_back(std::string(buf, ret));
-    client->sockfd = new_sock;
-    client->ip = str;
-    inst->clients[new_sock] = client;
-
-    if( inst->connectcallback )
-        inst->connectcallback(inst, new_sock, inst->userdata);
-
-    //设置用于读操作的文件描述符
-    struct epoll_event ev;
-    ev.data.fd=new_sock;
-    ev.events=EPOLLIN|EPOLLET;
-    epoll_ctl(epollfd,EPOLL_CTL_ADD,new_sock,&ev);
 
     return 0;  
 }  
@@ -172,12 +198,13 @@ int udp_server_eventloop(void* handle)
     listen(listenfd, 1024);
     inst->sockfd =listenfd;
 
-    char buffer[1024 * 5] = {0};
+    char buffer[1024 * 2] = {0};
 
     while( 1 ) 
     {
         //等待epoll事件的发生
         int nfds=epoll_wait(epfd,events,20,500);
+//        std::cout<<"epoll_wait "<<nfds<<std::endl;
 
         //处理所发生的所有事件
         for(int i=0;i<nfds;++i)
