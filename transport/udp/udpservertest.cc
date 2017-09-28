@@ -38,7 +38,7 @@ int main()
 		sleep( 1 );
 	}
 
-	tcp_server_free(handle);
+	udp_server_free(handle);
 
 	return 0;
 }

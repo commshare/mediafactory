@@ -12,23 +12,26 @@
 #include <string.h>
 #include <mutex>
 #include <thread>
+#include <deque>
 
 #include "udpserver.h"
 
-struct tcpclientdesc_t {
+typedef std::deque<std::string> UDPCLIENTDATAQUEUE;
+
+struct udpclientdesc_t {
     int sockfd;
     std::string ip;
     int port;
     std::mutex recvmutex;
     std::mutex sendmutex;
 
-    std::string recvbuffer;
-    std::string sendbuffer;    
+    UDPCLIENTDATAQUEUE recvqueue;
+    UDPCLIENTDATAQUEUE sendqueue;
 };
 
-typedef std::map<int, tcpclientdesc_t*> TCPCLIENTMAP;
+typedef std::map<int, udpclientdesc_t*> UDPCLIENTMAP;
 
-struct tcpserverdesc_t {
+struct udpserverdesc_t {
     int sockfd;
     std::string localip;
     int localport;
@@ -38,7 +41,7 @@ struct tcpserverdesc_t {
     void* userdata;
     std::thread threadeventloop;
 
-    TCPCLIENTMAP clients;
+    UDPCLIENTMAP clients;
 };
 
 int setnonblocking(int sock)
@@ -57,9 +60,83 @@ int setnonblocking(int sock)
     }
 }
 
+int udp_socket_connect(void* handle, int epollfd,struct sockaddr_in  *client_addr)  
+{        
+    udpserverdesc_t * inst = (udpserverdesc_t*)handle;
+
+    struct sockaddr_in my_addr, their_addr;  
+    int fd=socket(PF_INET, SOCK_DGRAM, 0);  
+      
+    /*设置socket属性，端口可以重用*/  
+    int opt=SO_REUSEADDR;  
+    setsockopt(fd,SOL_SOCKET,SO_REUSEADDR,&opt,sizeof(opt));  
+
+    setnonblocking(fd);  
+    bzero(&my_addr, sizeof(my_addr));  
+    my_addr.sin_family = PF_INET;  
+    my_addr.sin_port = htons(inst->localport);  
+    my_addr.sin_addr.s_addr = INADDR_ANY;  
+    if (bind(fd, (struct sockaddr *) &my_addr, sizeof(struct sockaddr)) == -1)   
+    {  
+        perror("bind");  
+        return -1;
+    }   
+    else  
+    {  
+        printf("IP and port bind success \n");  
+    }  
+
+    if(fd==-1)  
+        return  -1;  
+
+    if( connect(fd,(struct sockaddr*)client_addr,sizeof(struct sockaddr_in)) < 0 )
+    {
+        perror("connect");  
+        return -1;        
+    }  
+
+    return fd;     
+}  
+   
+int accept_client(void* handle, int epollfd,int listenfd)  
+{  
+    udpserverdesc_t * inst = (udpserverdesc_t*)handle;
+
+    struct sockaddr_in client_addr;  
+    socklen_t addr_size = sizeof(client_addr);  
+    char buf[2048] = {0};  
+    int ret = recvfrom(listenfd, buf,sizeof(buf), 0, (struct sockaddr *)&client_addr, &addr_size);  
+    //check(ret > 0, "recvfrom error");  
+    if( ret <= 0 )
+    {
+        return -1;
+    }
+
+    int new_sock=udp_socket_connect(handle, epollfd,(struct sockaddr_in*)&client_addr);  
+      
+    char *str = inet_ntoa(client_addr.sin_addr);
+    std::cout << "accapt a connection from " << str << " "<< buf<< ret << std::endl;
+    udpclientdesc_t *client = new udpclientdesc_t;
+    client->recvqueue.push_back(std::string(buf, ret));
+    client->sockfd = new_sock;
+    client->ip = str;
+    inst->clients[new_sock] = client;
+
+    if( inst->connectcallback )
+        inst->connectcallback(inst, new_sock, inst->userdata);
+
+    //设置用于读操作的文件描述符
+    struct epoll_event ev;
+    ev.data.fd=new_sock;
+    ev.events=EPOLLIN|EPOLLET;
+    epoll_ctl(epollfd,EPOLL_CTL_ADD,new_sock,&ev);
+
+    return 0;  
+}  
+
 int udp_server_eventloop(void* handle)
 {
-    tcpserverdesc_t * inst = (tcpserverdesc_t*)handle;
+    udpserverdesc_t * inst = (udpserverdesc_t*)handle;
 
     //声明epoll_event结构体的变量,ev用于注册事件,数组用于回传要处理的事件
     struct epoll_event ev,events[20];
@@ -68,7 +145,12 @@ int udp_server_eventloop(void* handle)
     int epfd=epoll_create(256);
     struct sockaddr_in clientaddr;
     struct sockaddr_in serveraddr;
-    int listenfd = socket(AF_INET, SOCK_STREAM, 0);
+    int listenfd = socket(AF_INET, SOCK_DGRAM, 0);
+    printf("listenfd = %d \n", listenfd);
+
+    /*设置socket属性，端口可以重用*/  
+    int opt=SO_REUSEADDR;  
+    setsockopt(listenfd,SOL_SOCKET,SO_REUSEADDR,&opt,sizeof(opt));  
 
     //把socket设置为非阻塞方式
     setnonblocking(listenfd);
@@ -102,31 +184,7 @@ int udp_server_eventloop(void* handle)
         {
             if(events[i].data.fd==listenfd)//如果新监测到一个SOCKET用户连接到了绑定的SOCKET端口，建立新的连接。
             {
-                socklen_t clilen;
-                int connfd = accept(listenfd,(sockaddr *)&clientaddr, &clilen);
-                if(connfd<0){
-                    perror("connfd<0 \n");
-                    return -1;
-                }
-                setnonblocking(connfd);
-                if( inst->connectcallback )
-                    inst->connectcallback(inst, connfd, inst->userdata);
-
-                char *str = inet_ntoa(clientaddr.sin_addr);
-                std::cout << "accapt a connection from " << str << std::endl;
-                tcpclientdesc_t *client = new tcpclientdesc_t;
-                client->sockfd = connfd;
-                client->ip = str;
-                inst->clients[connfd] = client;
-
-                //设置用于读操作的文件描述符
-                ev.data.fd=connfd;
-                //设置用于注测的读操作事件
-                ev.events=EPOLLIN|EPOLLET;
-//                ev.events=EPOLLIN;
-
-                //注册ev
-                epoll_ctl(epfd,EPOLL_CTL_ADD,connfd,&ev);
+                accept_client(handle, epfd, listenfd);
             }
             else if(events[i].events&EPOLLIN)//如果是已经连接的用户，并且收到数据，那么进行读入。
             {
@@ -135,7 +193,7 @@ int udp_server_eventloop(void* handle)
                 if ( sockfd < 0)
                     continue;
 
-                TCPCLIENTMAP::iterator iter = inst->clients.find(sockfd);
+                UDPCLIENTMAP::iterator iter = inst->clients.find(sockfd);
                 if( iter == inst->clients.end() )
                     return -1;
 
@@ -165,7 +223,7 @@ int udp_server_eventloop(void* handle)
                     std::cout<<buffer<<n<<std::endl;
 
                     iter->second->recvmutex.lock();
-                    iter->second->recvbuffer.append(buffer, n);
+                    iter->second->recvqueue.push_back(std::string(buffer, n));
                     iter->second->recvmutex.unlock();
                 }
 
@@ -182,20 +240,16 @@ int udp_server_eventloop(void* handle)
             {
                 std::cout<<"write"<<std::endl;
                 int sockfd = events[i].data.fd;
-                TCPCLIENTMAP::iterator iter = inst->clients.find(sockfd);
+                UDPCLIENTMAP::iterator iter = inst->clients.find(sockfd);
                 if( iter == inst->clients.end() )
                     return -1;
             
                 iter->second->sendmutex.lock();
-                if( iter->second->sendbuffer.size() > 0 )
+                if( iter->second->sendqueue.size() > 0 )
                 {
-                    if( iter->second->sendbuffer.size() <= 1024 * 5 )
-                        write(sockfd, iter->second->sendbuffer.data(), iter->second->sendbuffer.size());                    
-                    else
-                    {
-                        write(sockfd, iter->second->sendbuffer.data(), 1024*5);                        
-                        iter->second->sendbuffer.erase(0, 1024 * 5);
-                    }
+                    std::string data = iter->second->sendqueue.front();
+                    write(sockfd, data.data(), data.size());                    
+                    iter->second->sendqueue.pop_front();
                 }
                 iter->second->sendmutex.unlock();
 
@@ -217,7 +271,7 @@ int udp_server_eventloop(void* handle)
 
 void* udp_server_new(const char* localip, int localport, on_connect_callback connectcallback, on_close_callback closecallback, void* userdata)
 {
-    tcpserverdesc_t * inst = new tcpserverdesc_t;
+    udpserverdesc_t * inst = new udpserverdesc_t;
     if( !inst ) return NULL;
 
     inst->localip = localip;
@@ -233,29 +287,24 @@ void* udp_server_new(const char* localip, int localport, on_connect_callback con
 
 int udp_server_read(void* handle, int clientid, char* data, int length)
 {
-    tcpserverdesc_t * inst = (tcpserverdesc_t*)handle;
+    udpserverdesc_t * inst = (udpserverdesc_t*)handle;
 
-    TCPCLIENTMAP::iterator iter = inst->clients.find(clientid);
+    UDPCLIENTMAP::iterator iter = inst->clients.find(clientid);
     if( iter == inst->clients.end() )
         return -1;
 
     int reallength = 0;
     iter->second->recvmutex.lock();
-    if( iter->second->recvbuffer.size() <= 0 )
+    if( iter->second->recvqueue.size() <= 0 )
     {
         reallength = 0;
     }
-    else if( iter->second->recvbuffer.size() <= length)
-    {
-        reallength = iter->second->recvbuffer.size();
-        memcpy(data, iter->second->recvbuffer.data(), iter->second->recvbuffer.size());
-        iter->second->recvbuffer.clear();        
-    }
     else
     {
-        reallength = length;
-        memcpy(data, iter->second->recvbuffer.data(), length);
-        iter->second->recvbuffer.erase(0, length);                
+        std::string frontdata = iter->second->recvqueue.front();
+        reallength = frontdata.size();
+        memcpy(data, frontdata.data(), frontdata.size());
+        iter->second->recvqueue.pop_front();
     }
     iter->second->recvmutex.unlock();
 
@@ -264,14 +313,14 @@ int udp_server_read(void* handle, int clientid, char* data, int length)
 
 int udp_server_write(void* handle, int clientid, const char* data, int length)
 {
-    tcpserverdesc_t * inst = (tcpserverdesc_t*)handle;
+    udpserverdesc_t * inst = (udpserverdesc_t*)handle;
 
-    TCPCLIENTMAP::iterator iter = inst->clients.find(clientid);
+    UDPCLIENTMAP::iterator iter = inst->clients.find(clientid);
     if( iter == inst->clients.end() )
         return -1;
 
     iter->second->sendmutex.lock();
-    iter->second->sendbuffer.append(data, length);
+    iter->second->sendqueue.push_back(std::string(data, length));
     iter->second->sendmutex.unlock();
 
     return 0;
@@ -279,14 +328,14 @@ int udp_server_write(void* handle, int clientid, const char* data, int length)
 
 int udp_server_close(void* handle, int clientid)
 {
-    tcpserverdesc_t * inst = (tcpserverdesc_t*)handle;
+    udpserverdesc_t * inst = (udpserverdesc_t*)handle;
 
-    TCPCLIENTMAP::iterator iter = inst->clients.find(clientid);
+    UDPCLIENTMAP::iterator iter = inst->clients.find(clientid);
     if( iter == inst->clients.end() )
         return -1;
 
     close(clientid);
-    tcpclientdesc_t* client = iter->second;
+    udpclientdesc_t* client = iter->second;
     delete client;
     inst->clients.erase(iter);
 
@@ -295,16 +344,16 @@ int udp_server_close(void* handle, int clientid)
 
 int udp_server_free(void* handle)
 {
-    tcpserverdesc_t * inst = (tcpserverdesc_t*)handle;
+    udpserverdesc_t * inst = (udpserverdesc_t*)handle;
 
     if( !inst->clients.empty() )
     {
-        for( TCPCLIENTMAP::iterator iter = inst->clients.begin();
+        for( UDPCLIENTMAP::iterator iter = inst->clients.begin();
             iter != inst->clients.end();
             ++iter)
             {
                 close(iter->first);
-                tcpclientdesc_t* client = iter->second;
+                udpclientdesc_t* client = iter->second;
                 delete client;
             }                
     }
