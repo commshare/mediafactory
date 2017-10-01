@@ -21,12 +21,49 @@ extern "C"{
 }
 #endif
 
-typedef int (*video_frame_callback)(uint8_t *data, int length, int64_t pts, int codec);
-typedef int (*audio_frame_callback)(uint8_t *data, int length, int64_t pts, int codec );
+struct ffmpegdemuxpacket_t
+{
+	uint8_t* data;
+	int size;
+	int64_t pts;
+	int stream_index;
+	int codec_id;
+	int codec_type;//0-video 1-audio 2-unknown
+};
 
-void* ffmpegdemux_open(const char* url, video_frame_callback, audio_frame_callback);
+struct ffmpegdemuxframe_t
+{
+	uint8_t** data;
+	int linesize[8];
+	int64_t pts;
+	int stream_index;
+	int codec_id;
+	int codec_type;//0-video 1-audio 2-unknown
+	union
+	{
+		struct image_t
+		{
+			int width;
+			int height;
+			int pix_fmt;		
+		}image;
+		struct sample_t
+		{
+			int channels;
+			int sample_fmt;
+			int sample_rate;	
+			int nb_samples;	
+		}sample;
+	}info;
+};
 
-int ffmpegdemux_eventloop(void* handle);
+void* ffmpegdemux_open(const char* url);
+
+int ffmpegdemux_read(void* handle, ffmpegdemuxpacket_t *packet);
+
+double ffmpegdemux_getclock(void* handle, int streamid, int64_t pts);
+
+int ffmpegdemux_decode(void *handle, int codecid, uint8_t *pBuffer, int dwBufsize, ffmpegdemuxframe_t *frame);
 
 int ffmpegdemux_close(void* handle);
 

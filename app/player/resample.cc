@@ -28,7 +28,7 @@ struct resampledesc_t
 	std::string buffer;
 };
 
-void* resample_open(int in_channel_layout,int in_sample_fmt,int in_sample_rate)
+void* resample_open(int in_channels,int in_sample_fmt,int in_sample_rate)
 {
 	resampledesc_t * inst = new resampledesc_t;
 	if( !inst )
@@ -47,6 +47,7 @@ void* resample_open(int in_channel_layout,int in_sample_fmt,int in_sample_rate)
     inst->out_buffer_size = av_samples_get_buffer_size(NULL, out_channels, out_nb_samples, (AVSampleFormat)out_sample_fmt,1);  
     inst->out_buffer = (uint8_t *)av_malloc(MAX_AUDIO_FRAME_SIZE*2);  
 
+	int in_channel_layout = av_get_default_channel_layout(in_channels);  
     pResampleCtx= swr_alloc_set_opts(pResampleCtx,out_channel_layout, (AVSampleFormat)out_sample_fmt, out_sample_rate,  
         in_channel_layout, (AVSampleFormat)in_sample_fmt, in_sample_rate,0,NULL);  
 

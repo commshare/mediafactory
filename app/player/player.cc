@@ -3,20 +3,15 @@
 #include <deque>
 #include <unistd.h>
 
-#include "WrapperLibAV.h"
+#include "player.h"
+#include "ffmpegdemux.h"
+#include "ffmpegdec.h"
 #include "WrapperSDL.h"
 
-#include "player.h"
 #include "rescale.h"
 #include "resample.h"
 
 #define AVCODEC_MAX_AUDIO_FRAME_SIZE 192000
-
-void* sdlhandle = NULL;
-void* rescalehandle = NULL;
-image_rescaled image;
-void* resamplehandle = NULL;
-sound_resampled soundframe;
 
 struct PACKETINFO
 {
@@ -27,11 +22,15 @@ struct PACKETINFO
 		iSize=packet.iSize;
 		iUsage=packet.iUsage;
 		ipts=packet.ipts;
+		streamid = packet.streamid;
+		codecid = packet.codecid;
 	}
 	Uint8 data[AVCODEC_MAX_AUDIO_FRAME_SIZE];
 	int iSize;
 	int iUsage;
 	int ipts;
+	int streamid;
+	int codecid;
 };
 
 template<typename ItemType>
@@ -144,22 +143,21 @@ private:
 
 typedef struct
 {
-	AVCodecContext *pAudioCodecCtx;
-	AVCodecContext *pVideoCodecCtx;
-
 	volatile double lfAudioClock;
 	volatile double lfVideoClock;
 
-	AVStream *pAudioStream;
-	AVStream *pVideoStream;
-
-	AVFrame *pAudioFrame;
-	AVFrame *pVideoFrame;
-
 	TQueue<PACKETINFO> queueAudioFrame;
-	TQueue<AVPacket> queueVideoFrame;
+	TQueue<PACKETINFO> queueVideoFrame;
 }VideoState;
+
 VideoState g_VideoState;
+
+void* sdlhandle = NULL;
+void* rescalehandle = NULL;
+image_rescaled image;
+void* resamplehandle = NULL;
+sound_resampled soundframe;
+void* demuxhandle = NULL;
 
 void AudioCallback(void *unused, Uint8 *stream, int len)
 {
@@ -173,8 +171,7 @@ void AudioCallback(void *unused, Uint8 *stream, int len)
 //		if( pVideoState->queueAudioFrame.Get(&pPacket) )
 		if( pVideoState->queueAudioFrame.Stream_Get(&pPacket) )
 		{
-			double dClock=-1.0;
-			AV_GetClock(pVideoState->pAudioStream,pPacket->ipts,&dClock);
+			double dClock=-ffmpegdemux_getclock(demuxhandle, pPacket->streamid, pPacket->ipts);
 //			printf("Audio Clock=%lf\n",dClock);
 			pVideoState->lfAudioClock=dClock;
 
@@ -200,52 +197,54 @@ void AudioCallback(void *unused, Uint8 *stream, int len)
 	}
 }
 
-static uint8_t *audio_chunk;  
-static uint32_t audio_len;  
-static uint8_t *audio_pos;  
-  
-void fill_audio(void *udata,Uint8 *stream,int len){  
-    SDL_memset(stream,0,len);  
-    if(audio_len ==0){  
-        return;  
-    }  
-    len=(len>audio_len?audio_len:len);  
-    SDL_MixAudio(stream,audio_pos,len,SDL_MIX_MAXVOLUME);  
-    audio_pos+=len;  
-    audio_len-=len;  
-  
-}  
-
 int VideoThread(void *arg)
 {
 	if( !arg )return 0;
 
 	VideoState *pVideoState=(VideoState*)arg;
+	ffmpegdemuxframe_t frame;
+
 	while( 1 )
 	{
-		if( pVideoState->pAudioCodecCtx && pVideoState->lfVideoClock > pVideoState->lfAudioClock )
+		if( pVideoState->lfVideoClock > pVideoState->lfAudioClock )
 		{
-			usleep(10 * 1000);
-			continue;
+			printf("clock wait %d %d\n", pVideoState->lfVideoClock, pVideoState->lfAudioClock);
+//			usleep(10 * 1000);
+//			continue;
 		}
 
-		AVPacket *packet=NULL;
+		PACKETINFO *packet=NULL;
 		if( pVideoState->queueVideoFrame.Stream_Get(&packet) )
 		{
-			if( AV_DecodeVideo(pVideoState->pVideoCodecCtx,pVideoState->pVideoFrame,packet) )
+			printf("videoframe size=%d \n", packet->iSize);
+			int ret = ffmpegdemux_decode(demuxhandle, packet->codecid, packet->data, packet->iSize, &frame);
+			if( ret < 0 )
 			{
-				double dClock=-1.0;
-				AV_GetClock(pVideoState->pVideoStream,packet->pts,&dClock);
+				pVideoState->queueVideoFrame.Stream_Pop();
+				usleep(10 * 1000);
+				continue;
+			}	
+
+			if( !rescalehandle )
+			{
+				rescalehandle = rescale_open(frame.info.image.width, frame.info.image.height, frame.info.image.pix_fmt);
+				if( SDL_InitializeVideo(sdlhandle, "wwl", frame.info.image.width, frame.info.image.height) < 0 )
+				{
+					printf("SDL_InitializeVideo error \n");
+					return -1;
+				}					
+			}
+
+			double dClock=-ffmpegdemux_getclock(demuxhandle, packet->streamid, packet->ipts);
 //				printf("Video Clock=%lf\n",dClock);
 //				printf("Video pixel format1=%d\n",pVideoState->pVideoCodecCtx->pix_fmt);
 //				printf("pVideoState->pVideoFrame width=%d\n", pVideoState->pVideoFrame->width);
 
-				pVideoState->lfVideoClock=dClock;
+			pVideoState->lfVideoClock=dClock;
 
-				rescale_image(rescalehandle, pVideoState->pVideoFrame->data, pVideoState->pVideoFrame->linesize, &image);
-				SDL_DisplayYUV(sdlhandle, image.data, image.linesize);
-			}
-			av_free_packet(packet);
+			rescale_image(rescalehandle, frame.data, frame.linesize, &image);
+			SDL_DisplayYUV(sdlhandle, image.data, image.linesize);
+
 			pVideoState->queueVideoFrame.Stream_Pop();
 		}
 		usleep(10 * 1000);
@@ -253,105 +252,37 @@ int VideoThread(void *arg)
 	return 1;
 }
 
-int InitializeVideoCodecFormat(MediaFormat *format,VideoState *state)
-{
-	//get stream type ID and decoders
-	format->streamID = -1;
-	format->tryInitTimes++;
-	AVCodecContext *pVideoCodecCtx=AV_GetCodecContext(format->pFormatCtx,AVMEDIA_TYPE_VIDEO,format->streamID);
-	if( !pVideoCodecCtx )
-	{
-		return -1;
-	}
-
-	//-----------------show every video frame
-	AVFrame *pFrameYUV = av_frame_alloc(); 
-	if( !pFrameYUV )
-		return -1;
-
-	rescalehandle = rescale_open(pVideoCodecCtx->width,pVideoCodecCtx->height,pVideoCodecCtx->pix_fmt);
-	if( SDL_InitializeVideo(sdlhandle, "wwl", pVideoCodecCtx->width,pVideoCodecCtx->height) < 0 )
-	{
-		printf("SDL_InitializeVideo error \n");
-		return -1;
-	}
-
-	state->pVideoCodecCtx=pVideoCodecCtx;
-	state->pVideoFrame=pFrameYUV;
-	state->lfVideoClock=0.0;
-	state->pVideoStream=format->pFormatCtx->streams[format->streamID];
-	if( state->queueVideoFrame.Init() )
-		SDL_CreateThread(VideoThread, "", state);
-
-	format->pCodecCtx = pVideoCodecCtx;
-	format->pFrame = pFrameYUV;
-
-	return 0;
-}
-
-int InitializeAudioCodecFormat(MediaFormat *format,VideoState *state)
-{
-	format->tryInitTimes++;
-	format->streamID = -1;
-	AVCodecContext *pAudioCodecCtx=AV_GetCodecContext(format->pFormatCtx,AVMEDIA_TYPE_AUDIO,format->streamID);
-	if( !pAudioCodecCtx )
-		return -1;
-
-	format->outSampleFmt = AV_SAMPLE_FMT_S16;
-	format->pCodecCtx = pAudioCodecCtx;
-	format->pFrame = av_frame_alloc(); 
-	state->pAudioCodecCtx=pAudioCodecCtx;
-	state->pAudioStream=format->pFormatCtx->streams[format->streamID];
-	state->lfAudioClock=0.0;
-	if (pAudioCodecCtx->channels == 1)
-		format->outChannelLayout = AV_CH_LAYOUT_MONO;
-	else
-		format->outChannelLayout= AV_CH_LAYOUT_STEREO;
-	format->outChannelNum = av_get_channel_layout_nb_channels(format->outChannelLayout);
-
-	int in_channel_layout = av_get_default_channel_layout(pAudioCodecCtx->channels);  
-
-	resamplehandle = resample_open(in_channel_layout, 
-		pAudioCodecCtx->sample_fmt, pAudioCodecCtx->sample_rate);
-
-	if( !state->queueAudioFrame.Init() )
-		return -1;
-
-//	if( SDL_InitializeAudio(sdlhandle, pAudioCodecCtx->sample_rate,pAudioCodecCtx->channels,state,fill_audio) < 0 )
-	if( SDL_InitializeAudio(sdlhandle, pAudioCodecCtx->sample_rate,pAudioCodecCtx->channels,state,AudioCallback) < 0 )
-	{
-		printf("SDL_InitializeAudio error\n");
-		return -1;
-	}
-
-	return 0;
-}
-
 int ShowSDL(std::string strFileName,void* hwnd)
 {
 	//initialize ffmpeg
-	AV_Initialize();
+	demuxhandle = ffmpegdemux_open(strFileName.c_str());
+	if( !demuxhandle )
+	{
+		printf("ffmpegdemux_open error \n");
+		return -1;		
+	}
+
 	sdlhandle = SDL_Initialize(hwnd);
-/////////////////////////////////////////////////////////////////////////////////////////
-	//open video source
-	AVFormatContext *pFormatCtx = AV_OpenVideoSource(strFileName.c_str());
-	if (!pFormatCtx)
-		return -1;
+	if( !sdlhandle )
+	{
+		printf("SDL_Initialize error \n");
+		return -1;		
+	}
 
-	//get stream type ID and decoders
-	MediaFormat VideoFmt = {pFormatCtx,0};
-//	InitializeVideoCodecFormat(&VideoFmt,&g_VideoState);
-
-	MediaFormat AudioFmt = {pFormatCtx,0};
-//	InitializeAudioCodecFormat(&AudioFmt,&g_VideoState);
+	g_VideoState.lfVideoClock=0.0;
+	g_VideoState.lfAudioClock=0.0;
+	if( g_VideoState.queueVideoFrame.Init() )
+		SDL_CreateThread(VideoThread, "", &g_VideoState);
 
 ////////////////////////////////////////////////////////////////////////////////////
-	AVPacket packet; 
+	ffmpegdemuxpacket_t packet; 
+	ffmpegdemuxframe_t frame;
+
 	while( 1 )
 	{
 		int iVideoLen,iAudioLen;
-		if( (g_VideoState.pVideoCodecCtx && (iVideoLen=g_VideoState.queueVideoFrame.Size())>5) 
-			&& (g_VideoState.pAudioCodecCtx && (iAudioLen=g_VideoState.queueAudioFrame.Size())>5)
+		if( (iVideoLen=g_VideoState.queueVideoFrame.Size())>5
+			&& (iAudioLen=g_VideoState.queueAudioFrame.Size())>5
 			)
 		{
 			printf("audiolistsize=%d,videolistsize=%d\n",iAudioLen,iVideoLen);
@@ -359,23 +290,58 @@ int ShowSDL(std::string strFileName,void* hwnd)
 			continue;
 		}
 
-		if( av_read_frame(pFormatCtx, &packet) < 0 )
+		if( ffmpegdemux_read(demuxhandle, &packet) < 0 )
 			break;
 
-		if( !VideoFmt.pCodecCtx && VideoFmt.tryInitTimes < 2 )
-			InitializeVideoCodecFormat(&VideoFmt,&g_VideoState);
-		if( !AudioFmt.pCodecCtx && !AudioFmt.tryInitTimes < 2 )
-			InitializeAudioCodecFormat(&AudioFmt,&g_VideoState);
-
-		if( packet.stream_index==VideoFmt.streamID )
+		if( packet.codec_type == 0 )
 		{
-//			printf("VideoFmt.streamID = %d \n", VideoFmt.streamID);
-			g_VideoState.queueVideoFrame.Stream_Push(packet);
+			PACKETINFO info;
+			info.ipts=packet.pts;
+			memcpy(info.data, packet.data, packet.size);
+			info.iSize=packet.size;
+			info.streamid = packet.stream_index;
+			info.codecid = packet.codec_id;
+			g_VideoState.queueVideoFrame.Stream_Push(info);
 		}
-		else if( packet.stream_index==AudioFmt.streamID )
+		else if( packet.codec_type == 1 )
 		{
-			if( AV_DecodeAudio(AudioFmt.pCodecCtx,AudioFmt.pFrame,&packet) )
+			int ret = ffmpegdemux_decode(demuxhandle, packet.codec_id, packet.data, packet.size, &frame);
+			if( ret == 0 )
 			{
+				if( !resamplehandle )
+				{
+					resamplehandle = resample_open(frame.info.sample.channels, 
+						frame.info.sample.sample_fmt, frame.info.sample.sample_rate);
+
+					if( !g_VideoState.queueAudioFrame.Init() )
+					{
+						printf("queueAudioFrame init error\n");
+						return -1;
+					}
+
+					if( SDL_InitializeAudio(sdlhandle, 
+						frame.info.sample.sample_rate,frame.info.sample.channels, &g_VideoState, AudioCallback) < 0 )
+					{
+						printf("SDL_InitializeAudio error\n");
+						return -1;
+					}					
+				}
+
+				PACKETINFO info;
+				info.ipts=packet.pts;
+
+				resample_sound(resamplehandle, frame.data, frame.linesize, 
+					frame.info.sample.nb_samples, &soundframe);
+
+				memcpy(info.data, soundframe.data, soundframe.linesize);
+				info.iSize=soundframe.linesize;
+				info.streamid = packet.stream_index;
+				info.codecid = packet.codec_id;
+				g_VideoState.queueAudioFrame.Stream_Push(info);
+			}
+
+//			if( AV_DecodeAudio(AudioFmt.pCodecCtx,AudioFmt.pFrame,&packet) )
+/*			{
 				AudioFmt.pFrame->format;AudioFmt.pFrame->sample_rate;AudioFmt.pFrame->channel_layout;
 				AudioFmt.pCodecCtx->sample_fmt;AudioFmt.pCodecCtx->sample_rate;AudioFmt.pCodecCtx->channel_layout;
 //					printf("audio format =%d,output format=%d\n",pFrameAudio->format, outSampleFmt);
@@ -392,9 +358,11 @@ int ShowSDL(std::string strFileName,void* hwnd)
 
 				memcpy(info.data, soundframe.data, soundframe.linesize);
 				info.iSize=soundframe.linesize;
+				info.codecid = packet.codec_id;
 				g_VideoState.queueAudioFrame.Stream_Push(info);
+
 			}
-			av_free_packet(&packet);
+*/
 		}
 
 		usleep(10 * 1000);
@@ -415,82 +383,6 @@ int ShowSDL(std::string strFileName,void* hwnd)
 // 		avcodec_close(pAudioCodecCtx);
 // 	if( pFormatCtx )
 // 		avformat_close_input(&pFormatCtx);
-
-	return 1;
-}
-
-//////////////////////////////////server//////////////////////////////////////////////////////
-void logFF(void *, int level, const char *fmt, va_list ap)
-{
-	printf(fmt, ap);
-}
-
-int OpenRtpStream(std::string strFileName, void* hwnd, std::string strProtocol, std::string strIP, int port, int localport)
-{
-	//initialize ffmpeg
-	AV_Initialize();
-	SDL_Initialize(hwnd);
-	/////////////////////////////////////////////////////////////////////////////////////////
-	//open video source
-	av_log_set_callback(&logFF);
-
-	AVFormatContext *pFormatCtx = AV_OpenVideoSource(strFileName.c_str());
-
-	//get stream type ID and decoders
-	MediaFormat VideoFmt = { pFormatCtx, 0 };
-	InitializeVideoCodecFormat(&VideoFmt, &g_VideoState);
-
-	int nVideoStreamID =-1;
-	AVCodecContext *pVideoCodecCtx = AV_GetCodecContext(pFormatCtx, AVMEDIA_TYPE_VIDEO, nVideoStreamID);
-	AVFormatContext *pRtpVideoFmtCtx = NULL;
-	if (pVideoCodecCtx)
-	{
-		AV_InitOutputFmt2(pFormatCtx->streams[nVideoStreamID], strProtocol.c_str(), strIP.c_str(), port, localport, &pRtpVideoFmtCtx);
-	}
-
-	MediaFormat AudioFmt = { pFormatCtx, 0 };
-	InitializeAudioCodecFormat(&AudioFmt, &g_VideoState);
-	int nAudioStreamID = -1;
-	AVCodecContext *pAudioCodecCtx = AV_GetCodecContext(pFormatCtx, AVMEDIA_TYPE_AUDIO, nAudioStreamID);
-	AVFormatContext *pRtpAudioFmtCtx = NULL;
-	if (pAudioCodecCtx)
-	{
-		AV_InitOutputFmt2(pFormatCtx->streams[nAudioStreamID], strProtocol.c_str(), strIP.c_str(), port, localport, &pRtpAudioFmtCtx);
-	}
-
-	////////////////////////////////////////////////////////////////////////////////////
-	AVPacket packet;
-	while (1)
-	{
-		if (av_read_frame(pFormatCtx, &packet) >= 0)
-		{
-			if (packet.stream_index == nVideoStreamID)
-				AV_SendOutputPacket(pRtpVideoFmtCtx, pFormatCtx->streams[packet.stream_index], pRtpVideoFmtCtx->streams[0], &packet);
-
-			if (packet.stream_index == nAudioStreamID)
-				AV_SendOutputPacket(pRtpAudioFmtCtx, pFormatCtx->streams[packet.stream_index], pRtpAudioFmtCtx->streams[0], &packet);
-
-			av_free_packet(&packet);
-		}
-
-		usleep(10 * 1000);
-	}
-
-	//-------------------release resource
-	// 	if( pFrameYUV )
-	// 		av_free(pFrameYUV);
-	// 	if( pFrameAudio )
-	// 		av_free(pFrameAudio);
-	// 
-	// 	if( pResampleCtx )
-	// 		avresample_free(&pResampleCtx);
-	// 
-	// 	if( pVideoCodecCtx )
-	// 		avcodec_close(pVideoCodecCtx);
-	// 	if( pAudioCodecCtx )
-	// 		avcodec_close(pAudioCodecCtx);
-	// 	if( pFormatCtx )
-	// 		avformat_close_input(&pFormatCtx);
 
 	return 1;
 }

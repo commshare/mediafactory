@@ -376,15 +376,6 @@ int ShowSDL(std::string strFileName,void* hwnd)
 		{
 			if( AV_DecodeAudio(AudioFmt.pCodecCtx,AudioFmt.pFrame,&packet) )
 			{
-				AudioFmt.pFrame->format;AudioFmt.pFrame->sample_rate;AudioFmt.pFrame->channel_layout;
-				AudioFmt.pCodecCtx->sample_fmt;AudioFmt.pCodecCtx->sample_rate;AudioFmt.pCodecCtx->channel_layout;
-//					printf("audio format =%d,output format=%d\n",pFrameAudio->format, outSampleFmt);
-
-				printf("audio format =%d %d %d \n",
-						AudioFmt.pCodecCtx->channel_layout,
-						AudioFmt.pCodecCtx->sample_fmt,
-						AudioFmt.pCodecCtx->sample_rate);
-
 				PACKETINFO info;
 				info.ipts=packet.pts;
 				resample_sound(resamplehandle, AudioFmt.pFrame->data, AudioFmt.pFrame->linesize, 
