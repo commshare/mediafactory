@@ -1,24 +1,5 @@
-#ifdef __cplusplus
-extern "C"{
-#endif
-	#include "libavformat/avformat.h"
-	#include "libavcodec/avcodec.h"
-	#include "libswscale/swscale.h"
-	#include "libswresample/swresample.h"
-	#include "libavutil/avutil.h"
-	#include "libavutil/opt.h"
-	#include "libavfilter/avfilter.h"
-	#include "libavdevice/avdevice.h"
-	#include "libavutil/opt.h"
-	#include "libavutil/error.h"
-	#include "libavutil/mathematics.h"
-	#include "libavutil/samplefmt.h"
-#ifdef __cplusplus
-}
-#endif
-
+#include "SDL2/SDL.h"
 #include "WrapperSDL.h"
-#include "WrapperLibAV.h"
 
 struct SDL2Desc_t 
 {

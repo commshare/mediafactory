@@ -3,8 +3,6 @@
 
 #include <string>
 
-int ShowSDL(std::string strFileName,void* hwnd);
-
-int OpenRtpStream(std::string strFileName, void* hwnd, std::string strProtocol, std::string strIP, int port, int localport);
+int player_playurl(std::string url,void* hwnd);
 
 #endif

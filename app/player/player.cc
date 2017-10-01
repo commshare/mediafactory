@@ -2,6 +2,7 @@
 #include <atomic>
 #include <deque>
 #include <unistd.h>
+#include <thread>
 
 #include "player.h"
 #include "ffmpegdemux.h"
@@ -158,10 +159,11 @@ image_rescaled image;
 void* resamplehandle = NULL;
 sound_resampled soundframe;
 void* demuxhandle = NULL;
+std::thread threadeventloop;
 
-void AudioCallback(void *unused, Uint8 *stream, int len)
+void AudioCallback(void *userdata, Uint8 *stream, int len)
 {
-	VideoState *pVideoState = (VideoState *)unused;
+	VideoState *pVideoState = (VideoState *)userdata;
 	Uint8 *pBuf=stream;
 	int length=len;
 	int iFilledSize=0;
@@ -172,8 +174,8 @@ void AudioCallback(void *unused, Uint8 *stream, int len)
 		if( pVideoState->queueAudioFrame.Stream_Get(&pPacket) )
 		{
 			double dClock=-ffmpegdemux_getclock(demuxhandle, pPacket->streamid, pPacket->ipts);
-//			printf("Audio Clock=%lf\n",dClock);
 			pVideoState->lfAudioClock=dClock;
+			printf("Audio Clock=%lf %lf %d %d \n",pVideoState->lfAudioClock, dClock, pPacket->streamid, pPacket->ipts);
 
 			int iPacketSize=pPacket->iSize-pPacket->iUsage;
 			int len1=length-iPacketSize;
@@ -206,17 +208,17 @@ int VideoThread(void *arg)
 
 	while( 1 )
 	{
-		if( pVideoState->lfVideoClock > pVideoState->lfAudioClock )
+		if( fabs(pVideoState->lfVideoClock - pVideoState->lfAudioClock) * 1000 < 500 )
 		{
-			printf("clock wait %d %d\n", pVideoState->lfVideoClock, pVideoState->lfAudioClock);
-//			usleep(10 * 1000);
-//			continue;
+			printf("clock wait %lf %lf\n", pVideoState->lfVideoClock, pVideoState->lfAudioClock);
+			usleep(10 * 1000);
+			continue;
 		}
 
 		PACKETINFO *packet=NULL;
 		if( pVideoState->queueVideoFrame.Stream_Get(&packet) )
 		{
-			printf("videoframe size=%d \n", packet->iSize);
+//			printf("videoframe size=%d \n", packet->iSize);
 			int ret = ffmpegdemux_decode(demuxhandle, packet->codecid, packet->data, packet->iSize, &frame);
 			if( ret < 0 )
 			{
@@ -236,10 +238,7 @@ int VideoThread(void *arg)
 			}
 
 			double dClock=-ffmpegdemux_getclock(demuxhandle, packet->streamid, packet->ipts);
-//				printf("Video Clock=%lf\n",dClock);
-//				printf("Video pixel format1=%d\n",pVideoState->pVideoCodecCtx->pix_fmt);
-//				printf("pVideoState->pVideoFrame width=%d\n", pVideoState->pVideoFrame->width);
-
+//			printf("Video Clock=%lf %d %d \n",dClock, packet->streamid, packet->ipts);
 			pVideoState->lfVideoClock=dClock;
 
 			rescale_image(rescalehandle, frame.data, frame.linesize, &image);
@@ -252,10 +251,10 @@ int VideoThread(void *arg)
 	return 1;
 }
 
-int ShowSDL(std::string strFileName,void* hwnd)
+int player_playurl(std::string url,void* hwnd)
 {
 	//initialize ffmpeg
-	demuxhandle = ffmpegdemux_open(strFileName.c_str());
+	demuxhandle = ffmpegdemux_open(url.c_str());
 	if( !demuxhandle )
 	{
 		printf("ffmpegdemux_open error \n");
@@ -271,8 +270,10 @@ int ShowSDL(std::string strFileName,void* hwnd)
 
 	g_VideoState.lfVideoClock=0.0;
 	g_VideoState.lfAudioClock=0.0;
-	if( g_VideoState.queueVideoFrame.Init() )
-		SDL_CreateThread(VideoThread, "", &g_VideoState);
+	g_VideoState.queueVideoFrame.Init();
+
+//		SDL_CreateThread(VideoThread, "", &g_VideoState);
+    threadeventloop = std::thread(VideoThread, (void*)&g_VideoState);
 
 ////////////////////////////////////////////////////////////////////////////////////
 	ffmpegdemuxpacket_t packet; 
@@ -339,30 +340,6 @@ int ShowSDL(std::string strFileName,void* hwnd)
 				info.codecid = packet.codec_id;
 				g_VideoState.queueAudioFrame.Stream_Push(info);
 			}
-
-//			if( AV_DecodeAudio(AudioFmt.pCodecCtx,AudioFmt.pFrame,&packet) )
-/*			{
-				AudioFmt.pFrame->format;AudioFmt.pFrame->sample_rate;AudioFmt.pFrame->channel_layout;
-				AudioFmt.pCodecCtx->sample_fmt;AudioFmt.pCodecCtx->sample_rate;AudioFmt.pCodecCtx->channel_layout;
-//					printf("audio format =%d,output format=%d\n",pFrameAudio->format, outSampleFmt);
-
-				printf("audio format =%d %d %d \n",
-						AudioFmt.pCodecCtx->channel_layout,
-						AudioFmt.pCodecCtx->sample_fmt,
-						AudioFmt.pCodecCtx->sample_rate);
-
-				PACKETINFO info;
-				info.ipts=packet.pts;
-				resample_sound(resamplehandle, AudioFmt.pFrame->data, AudioFmt.pFrame->linesize, 
-					AudioFmt.pFrame->nb_samples, &soundframe);
-
-				memcpy(info.data, soundframe.data, soundframe.linesize);
-				info.iSize=soundframe.linesize;
-				info.codecid = packet.codec_id;
-				g_VideoState.queueAudioFrame.Stream_Push(info);
-
-			}
-*/
 		}
 
 		usleep(10 * 1000);
