@@ -1,5 +1,5 @@
 #include "SDL2/SDL.h"
-#include "WrapperSDL.h"
+#include "sdlplay.h"
 
 struct SDL2Desc_t 
 {
@@ -9,7 +9,7 @@ struct SDL2Desc_t
     SDL_Rect sdlRect;  
 };
 
-void* SDL_Initialize(void* parenthwnd)
+void* sdlplay_open(void* parenthwnd)
 {
 	//如果使用本地窗口，需要设置窗口句柄
 /*	if( parenthwnd )
@@ -29,7 +29,7 @@ void* SDL_Initialize(void* parenthwnd)
 	return inst;
 }
 
-int SDL_InitializeVideo(void* handle, const char* windowtitle, int iWidth,int iHeight )
+int sdlplay_set_video(void* handle, const char* windowtitle, int iWidth,int iHeight)
 {
 	SDL2Desc_t *inst = (SDL2Desc_t*)handle;
 	printf("SDL_InitializeVideo %d %d \n", iWidth, iHeight);
@@ -55,7 +55,7 @@ int SDL_InitializeVideo(void* handle, const char* windowtitle, int iWidth,int iH
 	return 0;
 }
 
-int SDL_InitializeAudio(void* handle, int iSampleRate,int iChannels,void *pUserData,void (SDLCALL *FuncCallback)(void *userdata, Uint8 *stream, int len))
+int sdlplay_set_audio(void* handle, int iSampleRate,int iChannels,void *pUserData, sdlplay_audio_callback callback)
 {
 	printf("SDL_InitializeAudio %d %d \n",iSampleRate, iChannels);
 
@@ -65,7 +65,7 @@ int SDL_InitializeAudio(void* handle, int iSampleRate,int iChannels,void *pUserD
 	wanted_spec.userdata = pUserData;  
 	wanted_spec.format = AUDIO_S16SYS;
 	wanted_spec.silence = 0;  
-	wanted_spec.callback = FuncCallback;  
+	wanted_spec.callback = callback;  
 	wanted_spec.samples = 1024;
 	if(SDL_OpenAudio(&wanted_spec, &spec) < 0)  
 	{  
@@ -77,7 +77,7 @@ int SDL_InitializeAudio(void* handle, int iSampleRate,int iChannels,void *pUserD
 	return 0;
 }
 
-int SDL_DisplayYUV(void* handle, uint8_t* data[], int linesize[])
+int sdlplay_display_yuv(void* handle, uint8_t* data[], int linesize[])
 {
 	SDL2Desc_t *inst = (SDL2Desc_t*)handle;
 
@@ -91,7 +91,7 @@ int SDL_DisplayYUV(void* handle, uint8_t* data[], int linesize[])
     return 0;
 }
 
-int SDL_Display(void* handle, uint8_t* data[], int linesize[])
+int sdlplay_display(void* handle, uint8_t* data[], int linesize[])
 {
 	SDL2Desc_t *inst = (SDL2Desc_t*)handle;
 
@@ -104,7 +104,7 @@ int SDL_Display(void* handle, uint8_t* data[], int linesize[])
     return 0;
 }
 
-int SDL_close(void* handle)
+int sdlplay_close(void* handle)
 {
 	SDL2Desc_t *inst = (SDL2Desc_t*)handle;
 

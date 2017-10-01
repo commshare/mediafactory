@@ -9,9 +9,9 @@ extern "C"{
 }
 #endif
 
-#include "rescale.h"
+#include "ffmpegscale.h"
 
-struct rescaledesc_t
+struct scaledesc_t
 {
 	AVFrame *pFrameYUV;
 	unsigned char* out_buffer;	
@@ -20,9 +20,9 @@ struct rescaledesc_t
 	int height;
 };
 
-void* rescale_open(int width, int height, int pix_fmt)
+void* scale_open(int width, int height, int pix_fmt)
 {
-	rescaledesc_t * inst = new rescaledesc_t;
+	scaledesc_t * inst = new scaledesc_t;
 	if( !inst )
 		return NULL;
 
@@ -39,9 +39,9 @@ void* rescale_open(int width, int height, int pix_fmt)
 	return inst;
 }
 
-int rescale_image(void* handle, uint8_t **data, int linesize[], image_rescaled *image)
+int scale_image(void* handle, uint8_t **data, int linesize[], image_scaled *image)
 {
-	rescaledesc_t * inst = (rescaledesc_t*)handle;
+	scaledesc_t * inst = (scaledesc_t*)handle;
 
     sws_scale(inst->img_convert_ctx, data, linesize, 0, inst->height,   
         inst->pFrameYUV->data, inst->pFrameYUV->linesize);  
@@ -52,9 +52,9 @@ int rescale_image(void* handle, uint8_t **data, int linesize[], image_rescaled *
     return 0;
 }
 
-int rescale_close(void* handle)
+int scale_close(void* handle)
 {
-	rescaledesc_t * inst = (rescaledesc_t*)handle;
+	scaledesc_t * inst = (scaledesc_t*)handle;
 	av_frame_free(&inst->pFrameYUV);
 	av_free(inst->out_buffer);
 

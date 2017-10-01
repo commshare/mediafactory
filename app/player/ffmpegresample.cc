@@ -10,7 +10,7 @@ extern "C"{
 #endif
 
 #include <string>
-#include "resample.h"
+#include "ffmpegresample.h"
 
 #define MAX_AUDIO_FRAME_SIZE 19200  
 
