@@ -3,8 +3,6 @@
 #include <event2/bufferevent.h>
 #include <event2/buffer.h>
 
-#include <arpa/inet.h>
-
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -84,6 +82,16 @@ static void accept_error_cb(struct evconnlistener *listener, void *ctx)
 
 int main(int argc, char **argv)
 {
+#ifdef WINNT
+    WSADATA wsaData;
+    int iResult = -1;
+    if( 0 != (iResult = WSAStartup(MAKEWORD(2,2), &wsaData)) )
+    {
+        printf("WSAStartup failed with error: %d\n", iResult);
+        return -1;
+    }
+#endif
+
     struct event_base *base;
     struct evconnlistener *listener;
     struct sockaddr_in sin;

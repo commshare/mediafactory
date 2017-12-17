@@ -1,12 +1,19 @@
 #include <stdio.h>  
 #include <stdlib.h>  
 #include <string.h>  
-#include <sys/socket.h>  
 #include <sys/types.h>  
 #include <unistd.h>  
-#include <netinet/in.h>  
 #include <errno.h>
+
+#ifdef WINNT
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
+#else
+#include <sys/socket.h>  
+#include <netinet/in.h>  
 #include <arpa/inet.h>  
+#endif
 
 #include "rtph264.h"  
 #include "sps_pps.h"
@@ -203,7 +210,7 @@ int udp_proc(char *clientIP, int clientport, char *filePath)
 	SPS sps;
 	memset(&sps, 0, sizeof(sps));
 
-    uint realtime = 0, sendtime = 0;
+    uint32_t realtime = 0, sendtime = 0;
     while(!feof(bits))   
     {  
         if( realtime < sendtime )
