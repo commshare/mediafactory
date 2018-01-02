@@ -64,10 +64,6 @@ int rtp_set_h264_frame_over_udp(void* handle, const char* frame_buffer, int fram
     rtp_h264_mux_desc_t* rtp_mux = (rtp_h264_mux_desc_t*)handle;
     rtp_mux->rtp_buffer.clear();
 
-    NALU_HEADER     nalu_hdr = *(NALU_HEADER*)frame_buffer;  
-    FU_INDICATOR    fu_ind;  
-    FU_HEADER       fu_hdr;  
-
    //设置RTP HEADER，  
     RTP_FIXED_HEADER rtp_hdr;      
     memset(&rtp_hdr,0,sizeof(rtp_hdr));  
@@ -94,40 +90,20 @@ int rtp_set_h264_frame_over_udp(void* handle, const char* frame_buffer, int fram
     }
     else
     {  
-        //得到该nalu需要用多少长度为1400字节的RTP包来发送  
-        int k = frame_length / MAX_RTP_BODY_LENGTH;//需要k个1400字节的RTP包，这里为什么不加1呢？因为是从0开始计数的。  
-        int last = frame_length % MAX_RTP_BODY_LENGTH;//最后一个RTP包的需要装载的字节数  
-        int t = 0;//用于指示当前发送的是第几个分片RTP包  
-        rtp_mux->packet_count = k+1;
+        NALU_HEADER     nalu_hdr = *(NALU_HEADER*)frame_buffer;  
+        FU_INDICATOR    fu_ind;  
+        FU_HEADER       fu_hdr;  
+
+        frame_length--;
+        frame_buffer++;
+        rtp_mux->packet_count = 0;
 
         rtp_hdr.timestamp=htonl(rtp_mux->timestamp_current);  
         rtp_mux->timestamp_current += rtp_mux->timestamp_increse;  
-        while(t <= k)  
-        {  
+        while( frame_length > 0 )
+        {
             rtp_hdr.seq_no = htons(rtp_mux->sequence_number++); //序列号，每发送一个RTP包增1  
-            if( 0 == t )//发送一个需要分片的NALU的第一个分片，置FU HEADER的S位,t = 0时进入此逻辑。  
-            {  
-                //设置rtp M 位；  
-                rtp_hdr.marker = 0;  //最后一个NALU时，该值设置成1，其他都设置成0。  
-                rtp_mux->rtp_buffer.append((char*)&rtp_hdr, sizeof(rtp_hdr));
-        
-                //设置FU INDICATOR,并将这个HEADER填入sendbuf[12]  
-                fu_ind.F = nalu_hdr.F;  
-                fu_ind.NRI = nalu_hdr.NRI;  
-                fu_ind.TYPE = 28;  //FU-A类型。  
-                rtp_mux->rtp_buffer.append((char*)&fu_ind, sizeof(fu_ind));
-
-                //设置FU HEADER,并将这个HEADER填入sendbuf[13]  
-                fu_hdr.E = 0;  
-                fu_hdr.R = 0;  
-                fu_hdr.S = 1;  
-                fu_hdr.TYPE = nalu_hdr.TYPE;  
-                rtp_mux->rtp_buffer.append((char*)&fu_hdr, sizeof(fu_hdr));
-                rtp_mux->rtp_buffer.append(frame_buffer + 1, MAX_RTP_BODY_LENGTH);
-                t++;  
-            }
-            //发送一个需要分片的NALU的非第一个分片，清零FU HEADER的S位，如果该分片是该NALU的最后一个分片，置FU HEADER的E位  
-            else if(k == t)//发送的是最后一个分片，注意最后一个分片的长度可能超过1400字节（当 l> 1386时）。  
+            if(frame_length <= MAX_RTP_BODY_LENGTH)//发送的是最后一个分片，注意最后一个分片的长度可能超过1400字节（当 l> 1386时）。  
             {  
 
                 //设置rtp M 位；当前传输的是最后一个分片时该位置1  
@@ -142,16 +118,19 @@ int rtp_set_h264_frame_over_udp(void* handle, const char* frame_buffer, int fram
 
                 //设置FU HEADER,并将这个HEADER填入sendbuf[13]  
                 fu_hdr.R = 0;  
-                fu_hdr.S = 0;  
+                if( 0 == rtp_mux->packet_count )
+                    fu_hdr.S = 1;  
+                else
+                    fu_hdr.S = 0;  
                 fu_hdr.E = 1;  
                 fu_hdr.TYPE = nalu_hdr.TYPE;  
                 rtp_mux->rtp_buffer.append((char*)&fu_hdr, sizeof(fu_hdr));
-                rtp_mux->rtp_buffer.append(frame_buffer + t * MAX_RTP_BODY_LENGTH + 1, last-1);
-                rtp_mux->last_packet_length = last - 1 + 14;
-                t++;  
+
+                rtp_mux->rtp_buffer.append(frame_buffer, frame_length);
+                rtp_mux->last_packet_length = frame_length + 14;
             }  
             //既不是第一个分片，也不是最后一个分片的处理。  
-            else if(t < k && 0 != t)  
+            else if(frame_length > MAX_RTP_BODY_LENGTH)  
             {  
                 //设置rtp M 位；  
                 rtp_hdr.marker = 0;  
@@ -165,14 +144,23 @@ int rtp_set_h264_frame_over_udp(void* handle, const char* frame_buffer, int fram
 
                 //设置FU HEADER,并将这个HEADER填入sendbuf[13]  
                 fu_hdr.R = 0;  
-                fu_hdr.S = 0;  
+                if( 0 == rtp_mux->packet_count )
+                    fu_hdr.S = 1;  
+                else
+                    fu_hdr.S = 0;  
+
                 fu_hdr.E = 0;  
                 fu_hdr.TYPE = nalu_hdr.TYPE;  
                 rtp_mux->rtp_buffer.append((char*)&fu_hdr, sizeof(fu_hdr));
-                rtp_mux->rtp_buffer.append(frame_buffer + t * MAX_RTP_BODY_LENGTH + 1, MAX_RTP_BODY_LENGTH);
-                t++;  
+
+                rtp_mux->rtp_buffer.append(frame_buffer, MAX_RTP_BODY_LENGTH);
             }  
-        }  
+
+            rtp_mux->packet_count++;
+            frame_length -= MAX_RTP_BODY_LENGTH;
+            if( frame_length > 0 )
+                frame_buffer+= MAX_RTP_BODY_LENGTH;
+        }
     }  
 
     return 0;    
