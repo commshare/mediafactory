@@ -10,11 +10,10 @@ typedef struct
 {
     std::string client_ip;
     int client_rtp_port;
+    int server_rtp_port;
     std::string client_session_id;
 
 }rtsp_demux_desc_t;
-
-int serverport = 11002;
 
 std::string getResponse_OPTIONS(const char *server, std::string &seq)
 {
@@ -140,10 +139,11 @@ std::string getResponse_TEARDOWN(const char *sessionID, std::string &seq)
 }
 
 ////////////////////////////////////////////
-void* rtsp_demux_init(const char* sessionid)
+void* rtsp_demux_init(const char* sessionid, int local_rtp_port)
 {
     rtsp_demux_desc_t* handle = new rtsp_demux_desc_t;
     handle->client_session_id = sessionid;
+    handle->server_rtp_port = local_rtp_port;
 
     return (void*)handle;
 }
@@ -186,7 +186,7 @@ std::string rtsp_demux_parse(void* handle, const char* request, int &canSend)
             pos1 = strRequest.find(pos);
             std::string strTemp = strRequest.substr(pos+strlen("client_port="),pos1-pos);
             rtsp_demux->client_rtp_port = atoi(strTemp.c_str());
-            strResponse = getResponse_SETUP_UDP(rtsp_demux->client_session_id.c_str(), atoi(strTemp.c_str()), serverport, strCSeq);            
+            strResponse = getResponse_SETUP_UDP(rtsp_demux->client_session_id.c_str(), atoi(strTemp.c_str()), rtsp_demux->server_rtp_port, strCSeq);            
         }
     }
     else if( head == "PLAY" )

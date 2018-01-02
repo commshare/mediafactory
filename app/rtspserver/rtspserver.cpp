@@ -48,6 +48,10 @@ typedef struct
     int client_rtp_port;  
     unsigned int session_id;
     st_netfd_t client_fd;
+    int local_rtp_sock;
+    int local_rtcp_sock;
+    int local_rtp_port;
+    int local_rtcp_port;
 }rtsp_session_desc_t;
 
 int url_getmsg(std::string &buffer, std::string &msg)
@@ -61,29 +65,72 @@ int url_getmsg(std::string &buffer, std::string &msg)
     return 0;
 }
 
+int get_local_rtp_rtcp_port(int *rtp_sock, int *rtp_port, int *rtcp_sock, int *rtcp_port)
+{
+    for( int i = 11000;i<30000;i+=2)
+    {
+        int rtpsock = socket(PF_INET, SOCK_DGRAM, 0);
+        if( rtpsock < 0 ) 
+        {
+          printf("socket error");
+          return -1;
+        }
+
+        struct sockaddr_in lcl_addr;
+        bzero(&lcl_addr,sizeof(lcl_addr));
+        lcl_addr.sin_family = AF_INET;
+        lcl_addr.sin_addr.s_addr = htons(INADDR_ANY);
+        lcl_addr.sin_port = htons(i);
+        if (bind(rtpsock, (struct sockaddr *)&lcl_addr, sizeof(lcl_addr)) < 0) 
+        {
+            printf("bind error");
+            close(rtpsock);
+            continue;
+        }
+        *rtp_sock = rtpsock;
+        *rtp_port = i;
+
+        int rtcpsock = socket(PF_INET, SOCK_DGRAM, 0);
+        if( rtcpsock < 0 ) 
+        {
+          printf("socket error");
+          return -1;
+        }
+
+        lcl_addr.sin_port = htons(i+1);
+        if (bind(rtcpsock, (struct sockaddr *)&lcl_addr, sizeof(lcl_addr)) < 0) 
+        {
+            printf("bind error");
+            close(rtcpsock);
+            close(rtpsock);
+            continue;
+        }
+        *rtcp_sock = rtcpsock;
+        *rtcp_port = i+1;
+
+        break;
+    }
+
+    return 0;
+}
+
 void* mediaproc(void *arg)
 {
     rtsp_session_desc_t* session = (rtsp_session_desc_t*)arg;
     int clientport = session->client_rtp_port;
     printf(" clientport = %d \n", clientport);
-    int sock;
-    if ((sock = socket(PF_INET, SOCK_DGRAM, 0)) < 0) {
-      printf("socket error");
+
+    st_netfd_t srv_nfd;
+    if ((srv_nfd = st_netfd_open_socket(session->local_rtp_sock)) == NULL) {
+      printf("st_netfd_open error");
       return NULL;
     }
+
     struct sockaddr_in server;  
     int addrlen =sizeof(server);  
     server.sin_family=AF_INET;  
     server.sin_port=htons(clientport);            
     server.sin_addr.s_addr = inet_addr(session->client_ip.c_str());  
-    connect(sock, (const sockaddr *)&server, addrlen) ;//申请UDP套接字  
-
-    st_netfd_t srv_nfd;
-    if ((srv_nfd = st_netfd_open_socket(sock)) == NULL) {
-      printf("st_netfd_open error");
-      return NULL;
-    }
-
     if( 0 > st_connect(srv_nfd, (const sockaddr *)&server, addrlen, ST_UTIME_NO_TIMEOUT) )
     {
       printf("st_connect error");
@@ -185,9 +232,16 @@ void *handle_request(void *arg) {
     session->client_ip = inet_ntoa(addr.sin_addr);
     printf("clientip = %s \n", session->client_ip.c_str());
 
+    if( 0 > get_local_rtp_rtcp_port(&session->local_rtp_sock, &session->local_rtp_port, 
+                &session->local_rtcp_sock, &session->local_rtcp_port))
+    {
+        printf("get_local_rtp_rtcp_port error\n");
+        return NULL;
+    }
+
     char buf[1024] = {0};
     sprintf(buf, "%d", session->session_id);
-    void* rtspdemuxhandle = rtsp_demux_init(buf);
+    void* rtspdemuxhandle = rtsp_demux_init(buf, session->local_rtp_port);
 
     std::string buffer, msg;
     for(;;) {
