@@ -21,6 +21,7 @@ typedef struct
     unsigned long sequence_number;
     unsigned int timestamp_increse;
     unsigned int timestamp_current;
+    unsigned long rtp_ssrc;
 }rtp_h264_mux_desc_t;
 
 #pragma pack(push,1)
@@ -47,7 +48,7 @@ typedef struct {
 } FU_HEADER; /**//* 1 BYTES */        
 #pragma pack(pop)
 
-void* rtp_mux_init()
+void* rtp_mux_init(unsigned long ssrc)
 {
     rtp_h264_mux_desc_t* handle = new rtp_h264_mux_desc_t;
     handle->packet_length = MAX_RTP_BODY_LENGTH + 14;//1460;
@@ -55,6 +56,7 @@ void* rtp_mux_init()
     handle->sequence_number = 0;
     handle->timestamp_increse = 90000/25;
     handle->timestamp_current = 0;
+    handle->rtp_ssrc = ssrc;
 
     return (void*)handle;
 }
@@ -69,8 +71,7 @@ int rtp_set_h264_frame_over_udp(void* handle, const char* frame_buffer, int fram
     memset(&rtp_hdr,0,sizeof(rtp_hdr));  
     rtp_hdr.payload     = H264;  //负载类型号，  
     rtp_hdr.version     = 2;  //版本号，此版本固定为2  
-    rtp_hdr.marker    = 0;   //标志位，由具体协议规定其值。  
-    rtp_hdr.ssrc     = htonl(10);    //随机指定为10，并且在本RTP会话中全局唯一  
+    rtp_hdr.ssrc     = htonl(rtp_mux->rtp_ssrc);    //随机指定为10，并且在本RTP会话中全局唯一  
 
     //  当一个NALU小于1400字节的时候，采用一个单RTP包发送  
     if(frame_length <= MAX_RTP_BODY_LENGTH)  

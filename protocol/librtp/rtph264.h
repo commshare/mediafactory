@@ -7,7 +7,7 @@
 
 #include "rtp.h"
 
-void* rtp_mux_init();
+void* rtp_mux_init(unsigned long ssrc);
 
 int rtp_set_h264_frame_over_udp(void* handle, const char* frame_buffer, int frame_length);
 
