@@ -3,8 +3,6 @@
 
 tsfilewriter2::tsfilewriter2()
 {
-	m_frame_count = 0;
-
 	memset(&m_prog_info, 0, sizeof(m_prog_info));
 	m_prog_info.program_num = 1;
 	m_prog_info.prog[0].stream_num = 2;
@@ -14,11 +12,15 @@ tsfilewriter2::tsfilewriter2()
 
 tsfilewriter2::~tsfilewriter2()
 {
+	m_frame_count = 0;
+
 	ts_file.close();
 }
 
 int tsfilewriter2::open_file(const char* file_name)
 {
+	m_frame_count = 0;
+
 	ts_file.open(file_name, std::ios::binary|std::ios::out);
 
 	return ts_file.is_open();
