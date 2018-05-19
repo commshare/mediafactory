@@ -4,10 +4,15 @@
 tsfilewriter2::tsfilewriter2()
 {
 	memset(&m_prog_info, 0, sizeof(m_prog_info));
+
+//	m_prog_info.program_num = 1;
+//	m_prog_info.prog[0].stream_num = 1;
+//	m_prog_info.prog[0].stream[0].type = STREAM_TYPE_VIDEO_H264;
+
 	m_prog_info.program_num = 1;
 	m_prog_info.prog[0].stream_num = 2;
-	m_prog_info.prog[0].stream[0].type = STREAM_TYPE_AUDIO_AAC;
-	m_prog_info.prog[0].stream[1].type = STREAM_TYPE_VIDEO_H264;
+	m_prog_info.prog[0].stream[0].type = STREAM_TYPE_VIDEO_H264;
+	m_prog_info.prog[0].stream[1].type = STREAM_TYPE_AUDIO_AAC;
 }
 
 tsfilewriter2::~tsfilewriter2()
@@ -30,10 +35,11 @@ int tsfilewriter2::write_h264_pes(const char* framedata, int nFrameLen, uint64_t
 {
 	TEsFrame es = {0};
 	es.program_number = 0;
-	es.stream_number = 1;
+	es.stream_number = 0;
 	es.frame = (uint8_t*)framedata;
 	es.length = nFrameLen;
-	es.pts = pts;		// 示例中按帧率为25fps累计时间戳。正式使用应根据帧实际的时间戳填写。
+	// 示例中按帧率为25fps累计时间戳。正式使用应根据帧实际的时间戳填写。
+	es.pts = pts;		
 	es.is_key = 0;//framelength < 100? 1:0;					// 这里简单处理，认为信息帧（非数据帧）为关键帧。
 	if( m_frame_count%100 == 0 )
 		es.is_key = 1;
@@ -55,7 +61,7 @@ int tsfilewriter2::write_aac_pes(const char* framedata, int nFrameLen, uint64_t 
 {
 	TEsFrame es = {0};
 	es.program_number = 0;
-	es.stream_number = 0;
+	es.stream_number = 1;
 	es.frame = (uint8_t*)framedata;
 	es.length = nFrameLen;
 	es.pts = pts;		// 示例中按帧率为25fps累计时间戳。正式使用应根据帧实际的时间戳填写。

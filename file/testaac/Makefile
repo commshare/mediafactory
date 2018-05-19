@@ -1,8 +1,8 @@
 C 			 = c
 CPP 		 = cpp
 CXX = gcc
-CXXFLAGS = -g -I ../tsmux/
-LIBS =  -lstdc++ -lpthread
+CXXFLAGS = -w -g -D__STDC_CONSTANT_MACROS -I ../tsmux/
+LIBS =  -lstdc++ -lpthread -lavformat -lavutil
 
 TARGET0 = testaac
 
@@ -18,6 +18,7 @@ CPPOBJS = aacdemux.o main.o tsfile2.o  MuxTs.o pes.o tsmux.o \
 		../tsmux/Mybs.o \
 		../tsmux/Mycrc_32.o \
 		../tsmux/Ts.o \
+		ffmpeg_mux.o
 
 
 $(TARGET0):$(CPPOBJS) $(COBJS)
@@ -25,4 +26,4 @@ $(TARGET0):$(CPPOBJS) $(COBJS)
 
 clean:
 	clear
-	rm -rf $(OBJS) *.o $(TARGETS) test.ts aac.ts
+	rm -rf $(OBJS) *.o $(TARGETS) test.ts aac*.ts

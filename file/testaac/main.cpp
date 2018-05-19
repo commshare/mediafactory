@@ -1,15 +1,16 @@
 #include <stdio.h>  
+#include <sstream>
+
 #include "aacdemux.h"
 #include "tsfile2.h"
-#include "MuxTs.h"
-#include "tsmux.h"
-#include "Mux.h"
 #include "h264demux.h"
+#include "Mux.h"
+#include "ffmpeg_mux.h"
 
 int testaac1()
 {
 	void* handle = AACDemux_Init("song.aac", 1);
-	void* h264handle = H264Demux_Init("ts.h264", 0);
+	void* h264handle = H264Demux_Init("ts.h264", 1);
 	if( !h264handle )
 	{
 		printf("H264Framer_Init error\n");
@@ -17,17 +18,22 @@ int testaac1()
 	}
 
 	tsfilewriter2 tsfile;
-	tsfile.open_file("aac.ts");
+	tsfile.open_file("aac0.ts");
 
 	const char *frame = NULL;
 	int length = 0;
 	const char *h264frame = NULL;
 	int framelength = -1;
 
+	int filecounter = 0;
+	int keyframecounter = 0;
+	std::stringstream ss;
+
 	uint64_t pts = 0;
+	int ret = 0;
 	while( 1 )
 	{
-		int ret = AACDemux_GetFrame(handle, &frame, &length);
+		ret = AACDemux_GetFrame(handle, &frame, &length);
 		if( ret < 0 )
 			break;
 		tsfile.write_aac_pes(frame, length, pts);
@@ -37,6 +43,24 @@ int testaac1()
 		{
 			printf("ReadOneNaluFromBuf error\n");
 			break;
+		}
+		int frametype = h264frame[4]&0x1F;
+		printf("frametype %d\n", frametype);
+		if( frametype == 7 )
+		{
+			keyframecounter++;
+			if( keyframecounter > 5 )
+			{
+				keyframecounter = 0;
+				pts = 0;
+				
+				printf("new file \n");
+				tsfile.close_file();
+				filecounter++;
+				ss<<"aac"<<filecounter<<".ts";
+				tsfile.open_file(ss.str().c_str());
+				ss.str("");
+			}
 		}
 		tsfile.write_h264_pes(h264frame, framelength, pts);
 
@@ -83,25 +107,18 @@ int testaac2()
 	return 0;
 }
 
-#define BUF_SIZE (1<<20)
-
-static int g_is_ps = 0;
-static FILE *g_out_fp;
-static TsProgramInfo g_prog_info;
-static int g_frame_count = 0;
-static uint8_t g_outbuf[BUF_SIZE] = {0};
-static TDemux g_demux;
 int testaac3()
 {
 	void* handle = AACDemux_Init("song.aac", 1);
 	void* h264handle = H264Demux_Init("ts.h264", 0);
 
-	g_out_fp = fopen("aac.ts", "wb");
-	memset(&g_prog_info, 0, sizeof(g_prog_info));
-	g_prog_info.program_num = 1;
-	g_prog_info.prog[0].stream_num = 2;
-	g_prog_info.prog[0].stream[0].type = STREAM_TYPE_AUDIO_AAC;
-	g_prog_info.prog[0].stream[1].type = STREAM_TYPE_VIDEO_H264;
+	void* muxhandle = ffmpegmux_alloc("mux.ts");
+	ffmpegmux_addvideostream(muxhandle, 352, 288);
+	ffmpegmux_addaudiostream(muxhandle, 352, 288);
+	printf("ffmpegmux_addvideostream \n");
+	ffmpegmux_open(muxhandle);
+	printf("AACDemux_GetFrame 1\n");
+	printf("ffmpegmux_open \n");
 	
 	const char *frame = NULL;
 	int length = 0;
@@ -114,44 +131,19 @@ int testaac3()
 		int ret = AACDemux_GetFrame(handle, &frame, &length);
 		if( ret < 0 )
 			continue;
-
-		TEsFrame es = {0};
-		es.program_number = 0;
-		es.stream_number = 0;
-		es.frame = (uint8_t*)frame;
-		es.length = length;
-		es.is_key = 0;//framelength < 100? 1:0;					// 这里简单处理，认为信息帧（非数据帧）为关键帧。
-		if( g_frame_count%100 == 0 )
-			es.is_key = 1;
-
-		es.pts = 3600 * g_frame_count;		// 示例中按帧率为25fps累计时间戳。正式使用应根据帧实际的时间戳填写。
-		es.ps_pes_length = 8000;
-
-		printf("framelength %d \n",length);
-		int outlen = lts_ts_stream(&es, g_outbuf, BUF_SIZE, &g_prog_info);
-		if (outlen > 0)
-		{
-			fwrite(g_outbuf, 1, outlen, g_out_fp);
-		}
+		printf("ffmpegmux_write_audio frame \n");
+		ffmpegmux_write_frame(muxhandle, 1, frame, length, pts);
 		
-		es.is_key = 0;
 		ret = H264Demux_GetFrame(h264handle, &h264frame, &framelength);
 		if( ret < 0 )
 		{
 			printf("ReadOneNaluFromBuf error\n");
 			break;
 		}
-		es.stream_number = 1;
-		es.frame = (uint8_t*)h264frame;
-		es.length = framelength;
-/*		outlen = lts_ts_stream(&es, g_outbuf, BUF_SIZE, &g_prog_info);
-		if (outlen > 0)
-		{
-			fwrite(g_outbuf, 1, outlen, g_out_fp);
-		}
-*/
+		printf("ffmpegmux_write_video frame \n");
+//		ffmpegmux_write_frame(muxhandle, 0, h264frame, framelength, pts);
 
-		g_frame_count++;
+		pts += 3600;
 		usleep(100 * 1000);
 	}
 
@@ -162,7 +154,7 @@ int main()
 {
 	return testaac1();
 
-	return testaac2();
+//	return testaac2();
 
 	return testaac3();
 }
