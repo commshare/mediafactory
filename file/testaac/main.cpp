@@ -141,7 +141,7 @@ int testaac3()
 			break;
 		}
 		printf("ffmpegmux_write_video frame \n");
-//		ffmpegmux_write_frame(muxhandle, 0, h264frame, framelength, pts);
+		ffmpegmux_write_frame(muxhandle, 0, h264frame, framelength, pts);
 
 		pts += 3600;
 		usleep(100 * 1000);
@@ -152,7 +152,7 @@ int testaac3()
 
 int main()
 {
-	return testaac1();
+//	return testaac1();
 
 //	return testaac2();
 
