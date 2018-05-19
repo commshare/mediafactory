@@ -26,4 +26,4 @@ $(TARGET0):$(CPPOBJS) $(COBJS)
 
 clean:
 	clear
-	rm -rf $(OBJS) *.o $(TARGETS) test.ts aac*.ts
+	rm -rf $(OBJS) *.o $(TARGETS) *.ts
