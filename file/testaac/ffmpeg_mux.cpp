@@ -71,7 +71,7 @@ int ffmpegmux_addaudiostream(void* handle, int width, int height)
         printf("Call avformat_new_stream function failed\n");
         return -1;
     }
-    inst->video_st = output_stream;
+    inst->audio_st = output_stream;
 
     AVCodecContext *output_codec_context = output_stream->codec;
     output_codec_context->codec_type = AVMEDIA_TYPE_AUDIO;
@@ -141,6 +141,15 @@ int ffmpegmux_write_frame(void *handle, int stream_index, const char* frame, int
 int ffmpegmux_destroy(void* handle)
 {
 	ffmpegmux_tag_t *inst = (ffmpegmux_tag_t*)handle;
+    av_write_trailer(inst->output_format_context);
+    
+    if (!(inst->output_format_context->oformat->flags & AVFMT_NOFILE))
+        /* Close the output file. */
+        avio_closep(&inst->output_format_context->pb);
 
+    /* free the stream */
+    avformat_free_context(inst->output_format_context);
+
+    delete inst;
 	return 0;
 }
