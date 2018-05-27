@@ -128,27 +128,25 @@ class ServerStateCheckShutdown:
 def main():
 
 	while(True):
+		time.sleep(CHECK_SLEEP_DURATION)
+
 		sscs = ServerStateCheckShutdown()
 
-	#	if sscs.query_unprocessed_tasks() > 0:
-	#		del sscs
-	#		time.sleep(CHECK_SLEEP_DURATION)
-	#		continue
+		if sscs.query_unprocessed_tasks() > 0:
+			del sscs
+			continue
 
 		idle_server_ip = sscs.query_one_idle_server()
 
 		#http request
 		if idle_server_ip == "":
 			del sscs
-			time.sleep(CHECK_SLEEP_DURATION)
 			continue
 
 		sscs.set_server_hidden(idle_server_ip)
 		sscs.http_request(idle_server_ip)
 		
 		del sscs
-
-		time.sleep(CHECK_SLEEP_DURATION)
 
 if __name__ == "__main__":
 
