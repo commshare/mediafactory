@@ -54,7 +54,7 @@ int ffmpeg_enc_set_video(void *handle, int width, int height, int pixel_format)
 //    pCodecCtx->width = width;//视频宽  
 //    pCodecCtx->height = height;//视频高  
 
-    if(avcodec_open2(pCodecCtx, pCodec, NULL) < 0)  
+    if(avcodec_open2(pCodecCtx, inst->pCodec, NULL) < 0)  
     {
         printf("open codec failed \n");  
         return -1;  
@@ -77,7 +77,7 @@ int ffmpeg_enc_set_audio(void *handle, int width, int height, int pixel_format)
 //    pCodecCtx->width = width;//视频宽  
 //    pCodecCtx->height = height;//视频高  
 
-    if(avcodec_open2(pCodecCtx, pCodec, NULL) < 0)  
+    if(avcodec_open2(pCodecCtx, inst->pCodec, NULL) < 0)  
     {
         printf("open codec failed \n");  
         return -1;  
@@ -131,3 +131,4 @@ int video_generator_destroy(void *handle)
 	delete inst;
 	return 0;	
 }
+

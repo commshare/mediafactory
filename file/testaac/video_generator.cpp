@@ -1,5 +1,6 @@
 #include "video_generator.h"
 #include <string>
+#include <stdio.h>
 
 struct video_generator_tag_t
 {
@@ -22,34 +23,38 @@ void *video_generator_alloc(int width, int height, int pixel_format)
 	video_generator_tag_t *inst = new video_generator_tag_t;
 
 	inst->frame_index = 0;
-	inst->width = height;
-	inst->height = width;
+	inst->width = width;
+	inst->height = height;
 	inst->pixel_format = pixel_format;
 
-	inst->linesizeY = width * height;
-	inst->linesizeU = width * height / 4;
-	inst->linesizeV = width * height / 4;
-	inst->frameY.assign(inst->linesizeY);
-	inst->frameU.assign(inst->linesizeU);
-	inst->frameV.assign(inst->linesizeV);
+	inst->linesizeY = width + width % 2;
+	inst->linesizeU = inst->linesizeY / 4;
+	inst->linesizeV = inst->linesizeY / 4;
+
+	inst->frameY.reserve(width * height + width * height %2);
+	inst->frameU.reserve(width * height / 4 + width * height / 4 % 2);
+	inst->frameV.reserve(width * height / 4 + width * height / 4 % 2);
 	return inst;
 }
 
-int video_generator_get_yuv420p_frame(void* handle, const char** frame, int *Length)
+int video_generator_get_yuv420p_frame(void* handle, const char** frame, int *length)
 {
 	video_generator_tag_t *inst = (video_generator_tag_t*)handle;
 
-	char *dataY = inst->frameY.data();
+	char *dataY = (char*)inst->frameY.data();
     int x, y, i = inst->frame_index;
-    for (y = 0; y < height; y++)
-        for (x = 0; x < width; x++)
+    for (y = 0; y < inst->height; y++)
+        for (x = 0; x < inst->width; x++)
+        {
+//			printf("position %u %u %u\n",inst->width * inst->height, y * inst->linesizeY + x, inst->frameY.capacity());
             dataY[y * inst->linesizeY + x] = x + y + i * 3;
+        }
 
     /* Cb and Cr */
-	char *dataU = inst->frameU.data();
-	char *dataV = inst->frameV.data();
-    for (y = 0; y < height / 2; y++) {
-        for (x = 0; x < width / 2; x++) {
+	char *dataU = (char*)inst->frameU.data();
+	char *dataV = (char*)inst->frameV.data();
+    for (y = 0; y < inst->height / 2; y++) {
+        for (x = 0; x < inst->width / 2; x++) {
             dataU[y * inst->linesizeU + x] = 128 + y + i * 2;
             dataV[y * inst->linesizeV + x] = 64 + x + i * 5;
         }
@@ -57,9 +62,9 @@ int video_generator_get_yuv420p_frame(void* handle, const char** frame, int *Len
 
     inst->frame_index++;
 	inst->video_frame.clear();
-	inst->video_frame.append(inst->frameY.data(), inst->linesizeY);
-	inst->video_frame.append(inst->frameU.data(), inst->linesizeU);
-	inst->video_frame.append(inst->frameV.data(), inst->linesizeV);
+	inst->video_frame.append(inst->frameY.data(), inst->frameY.capacity());
+	inst->video_frame.append(inst->frameU.data(), inst->frameU.capacity());
+	inst->video_frame.append(inst->frameV.data(), inst->frameV.capacity());
     *frame = inst->video_frame.data();
     *length = inst->video_frame.size();
     

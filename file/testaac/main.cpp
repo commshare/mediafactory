@@ -6,6 +6,7 @@
 #include "h264demux.h"
 
 #include "ffmpeg_mux.h"
+#include "generator_test.h"
 
 int testaac1()
 {
@@ -145,7 +146,12 @@ int testaac2()
 
 int main()
 {
+
 //	return testaac1();
 
-	return testaac2();
+//	return testaac2();
+
+//	return testaac3();
+
+	return testaac4();
 }
