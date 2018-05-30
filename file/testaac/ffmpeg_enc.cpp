@@ -15,7 +15,7 @@ extern "C" {
 
 struct ffmpeg_enc_tag_t
 {
-	std::string frame;
+	std::string videoframe,audioframe;
  	AVCodecContext *pCodecCtx;
  	AVCodec *pCodec;
 };
@@ -86,7 +86,8 @@ int ffmpeg_enc_set_audio(void *handle, int width, int height, int pixel_format)
     return 0;
 }
 
-int ffmpeg_enc_encode_audio(void *handle, const char* framedata, int length, const char **packetdata, int *packetlength)
+int ffmpeg_enc_encode_audio(void *handle, const char* framedata, int length, 
+            const char **packetdata, int *packetlength)
 {
 	ffmpeg_enc_tag_t *inst = (ffmpeg_enc_tag_t*)handle;
 
@@ -99,10 +100,19 @@ int ffmpeg_enc_encode_audio(void *handle, const char* framedata, int length, con
         return -1;
     }
 
+    if( !got_packet )
+        return -2;
+
+    inst->audioframe.clear();
+    inst->audioframe.append(pkt.data, pkt.size);
+
+    *packetdata = inst->audioframe.data();
+    *packetlength = inst->audioframe.size();
     return 0;
 }
 
-int ffmpeg_enc_encode_video(void *handle, const char* framedata, int length, const char **packetdata, int *packetlength)
+int ffmpeg_enc_encode_video(void *handle, const char* framedata, int length, 
+            const char **packetdata, int *packetlength)
 {
 	ffmpeg_enc_tag_t *inst = (ffmpeg_enc_tag_t*)handle;
 
@@ -116,7 +126,16 @@ int ffmpeg_enc_encode_video(void *handle, const char* framedata, int length, con
         return -1;
     }
 
+    if( !got_packet )
+        return -2;
+
+    inst->videoframe.clear();
+    inst->videoframe.append(pkt.data, pkt.size);
+
+    *packetdata = inst->videoframe.data();
+    *packetlength = inst->videoframe.size();
     return 0;
+
 }
 
 int video_generator_destroy(void *handle)
