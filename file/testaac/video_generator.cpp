@@ -23,17 +23,17 @@ void *video_generator_alloc(int width, int height, int pixel_format)
 	video_generator_tag_t *inst = new video_generator_tag_t;
 
 	inst->frame_index = 0;
-	inst->width = width;
-	inst->height = height;
+	inst->width = (width/4 + width/4%2) * 4;
+	inst->height = (height/4 + height/4%2) * 4;
 	inst->pixel_format = pixel_format;
 
-	inst->linesizeY = width + width % 2;
+	inst->linesizeY = inst->width;
 	inst->linesizeU = inst->linesizeY / 4;
 	inst->linesizeV = inst->linesizeY / 4;
 
-	inst->frameY.reserve(width * height + width * height %2);
-	inst->frameU.reserve(width * height / 4 + width * height / 4 % 2);
-	inst->frameV.reserve(width * height / 4 + width * height / 4 % 2);
+	inst->frameY.resize(inst->width * inst->height);
+	inst->frameU.resize(inst->width * inst->height / 4);
+	inst->frameV.resize(inst->width * inst->height / 4);
 	return inst;
 }
 
@@ -62,9 +62,9 @@ int video_generator_get_yuv420p_frame(void* handle, const char** frame, int *len
 
     inst->frame_index++;
 	inst->video_frame.clear();
-	inst->video_frame.append(inst->frameY.data(), inst->frameY.capacity());
-	inst->video_frame.append(inst->frameU.data(), inst->frameU.capacity());
-	inst->video_frame.append(inst->frameV.data(), inst->frameV.capacity());
+	inst->video_frame.append(inst->frameY.data(), inst->frameY.size());
+	inst->video_frame.append(inst->frameU.data(), inst->frameU.size());
+	inst->video_frame.append(inst->frameV.data(), inst->frameV.size());
     *frame = inst->video_frame.data();
     *length = inst->video_frame.size();
     
