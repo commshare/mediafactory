@@ -62,7 +62,7 @@ int ffmpegmux_addvideostream(void* handle, int width, int height)
     return 0;
 }
 
-int ffmpegmux_addaudiostream(void* handle, int width, int height)
+int ffmpegmux_addaudiostream(void* handle, int sample_rate, int channels)
 {
     ffmpegmux_tag_t *inst = (ffmpegmux_tag_t*)handle;
 
@@ -77,10 +77,10 @@ int ffmpegmux_addaudiostream(void* handle, int width, int height)
     output_codec_context->codec_type = AVMEDIA_TYPE_AUDIO;
     output_codec_context->codec_id = AV_CODEC_ID_AAC;
 
-    output_codec_context->sample_rate = 44100;
-    output_codec_context->channels = 2;
+    output_codec_context->sample_rate = sample_rate;
+    output_codec_context->channels = channels;
 //    output_codec_context->channel_layout = av_get_default_channel_layout(output_codec_context->channels);
-    output_codec_context->channel_layout = AV_CH_LAYOUT_STEREO;
+/    output_codec_context->channel_layout = AV_CH_LAYOUT_STEREO;
     output_codec_context->sample_fmt = AV_SAMPLE_FMT_FLTP;
 
     if (inst->output_format_context->oformat->flags & AVFMT_GLOBALHEADER) {

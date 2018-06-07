@@ -6,12 +6,12 @@ void *ffmpeg_enc_alloc(int codecid);
 
 int ffmpeg_enc_set_video(void *handle, int width, int height, int pixel_format);
 
-int ffmpeg_enc_set_audio(void *handle, int width, int height, int pixel_format);
+int ffmpeg_enc_set_audio(void *handle, int sample_rate, int nb_samples, int channels);
 
 int ffmpeg_enc_encode_audio(void *handle, const char* framedata, int length, const char **packetdata, int *packetlength);
 
 int ffmpeg_enc_encode_video(void *handle, const char* framedata, int length, const char **packetdata, int *packetlength);
 
-int video_generator_destroy(void *handle)
+int ffmpeg_enc_destroy(void *handle);
 
 #endif

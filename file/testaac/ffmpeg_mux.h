@@ -6,7 +6,7 @@ void *ffmpegmux_alloc(const char* filenamewithsuffix);
 
 int ffmpegmux_addvideostream(void* handle, int width, int height);
 
-int ffmpegmux_addaudiostream(void* handle, int width, int height);
+int ffmpegmux_addaudiostream(void* handle, int sample_rate, int channels);
 
 int ffmpegmux_open(void* handle);
 

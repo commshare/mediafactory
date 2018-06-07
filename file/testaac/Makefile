@@ -18,7 +18,10 @@ CPPOBJS = aacdemux.o \
 		ffmpeg_mux.o \
 		generator_test.o \
 		audio_generator.o \
-		video_generator.o
+		video_generator.o \
+		ts_test.o \
+		tsfile.o \
+		ffmpeg_enc.o
 
 
 $(TARGET0):$(CPPOBJS) $(COBJS)

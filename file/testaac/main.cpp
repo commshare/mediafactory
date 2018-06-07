@@ -1,157 +1,43 @@
-#include <stdio.h>  
-#include <sstream>
-
-#include "aacdemux.h"
-#include "tsfile2.h"
-#include "h264demux.h"
-
-#include "ffmpeg_mux.h"
+#include "ts_test.h"
 #include "generator_test.h"
+#include <string.h>
+#include <stdio.h>
+#include<stdlib.h>
+#include <signal.h>
+#include <execinfo.h>
 
-int testaac1()
-{
-	void* handle = AACDemux_Init("song.aac", 1);
-	void* h264handle = H264Demux_Init("ts.h264", 1);
-	if( !h264handle )
-	{
-		printf("H264Framer_Init error\n");
-		return -1;
-	}
+static void WidebrightSegvHandler(int signum) {
+    void *array[10];
+    size_t size;
+    char **strings;
+    size_t i, j;
 
-	tsfilewriter2 tsfile;
-	tsfile.open_file("aac0.ts");
+    signal(signum, SIG_DFL);
 
-	const char *frame = NULL;
-	int length = 0;
-	const char *h264frame = NULL;
-	int framelength = -1;
+    size = backtrace (array, 10);
+    strings = (char **)backtrace_symbols (array, size);
 
-	int filecounter = 0;
-	int keyframecounter = 0;
-	std::stringstream ss;
+    fprintf(stderr, "widebright received SIGSEGV! Stack trace:\n");
+    for (i = 0; i < size; i++) {
+        fprintf(stderr, "%d %s \n",i,strings[i]);
+    }
 
-	uint64_t pts = 0;
-	int ret = 0;
-	while( 1 )
-	{
-		ret = AACDemux_GetFrame(handle, &frame, &length);
-		if( ret < 0 )
-			break;
-		tsfile.write_aac_pes(frame, length, pts);
-
-		ret = H264Demux_GetFrame(h264handle, &h264frame, &framelength);
-		if( ret < 0 )
-		{
-			printf("ReadOneNaluFromBuf error\n");
-			break;
-		}
-		int frametype = h264frame[4]&0x1F;
-		printf("frametype %d\n", frametype);
-		if( frametype == 7 )
-		{
-			keyframecounter++;
-			if( keyframecounter > 5 )
-			{
-				keyframecounter = 0;
-				pts = 0;
-				
-				printf("new file \n");
-				tsfile.close_file();
-				filecounter++;
-				ss<<"aac"<<filecounter<<".ts";
-				tsfile.open_file(ss.str().c_str());
-				ss.str("");
-			}
-		}
-		tsfile.write_h264_pes(h264frame, framelength, pts);
-
-		pts += 3600;
-		
-		usleep(100 * 1000);
-	}
-
-	return 0;
-}
-
-int testaac2()
-{
-	void* handle = AACDemux_Init("song.aac", 1);
-	void* h264handle = H264Demux_Init("ts.h264", 0);
-
-	void* muxhandle = ffmpegmux_alloc("mux0.ts");
-	ffmpegmux_addvideostream(muxhandle, 352, 288);
-	ffmpegmux_addaudiostream(muxhandle, 352, 288);
-	ffmpegmux_open(muxhandle);
-
-	printf("ffmpegmux_open \n");
-	
-	const char *frame = NULL;
-	int length = 0;
-	const char *h264frame = NULL;
-	int framelength = -1;
-
-	int filecounter = 0;
-	int keyframecounter = 0;
-	std::stringstream ss;
-
-	uint64_t pts = 0;
-	uint64_t audiopts = 0;
-	while( 1 )
-	{
-		int ret = AACDemux_GetFrame(handle, &frame, &length);
-		if( ret < 0 )
-			continue;
-		printf("ffmpegmux_write_audio frame \n");
-		ffmpegmux_write_frame(muxhandle, 1, frame, length, audiopts);
-		audiopts+=3600;
-
-		ret = H264Demux_GetFrame(h264handle, &h264frame, &framelength);
-		if( ret < 0 )
-		{
-			printf("ReadOneNaluFromBuf error\n");
-			break;
-		}
-		int frametype = h264frame[4]&0x1F;
-		printf("frametype %d\n", frametype);
-		if( frametype == 7 )
-		{
-			keyframecounter++;
-			if( keyframecounter > 5 )
-			{
-				keyframecounter = 0;
-				pts = 0;
-				audiopts = 0;
-
-				printf("new file \n");
-				ffmpegmux_destroy(muxhandle);
-				filecounter++;
-				ss<<"mux"<<filecounter<<".ts";
-				muxhandle = ffmpegmux_alloc(ss.str().c_str());
-				ffmpegmux_addvideostream(muxhandle, 352, 288);
-				ffmpegmux_addaudiostream(muxhandle, 352, 288);
-				ffmpegmux_open(muxhandle);
-				ss.str("");
-			}
-		}
-
-		printf("ffmpegmux_write_video frame \n");
-		ffmpegmux_write_frame(muxhandle, 0, h264frame, framelength, pts);
-
-		pts += 3600;
-		usleep(100 * 1000);
-	}
-
-	return 0;
+    free (strings);
+    exit(1);
 }
 
 int main()
 {
+	signal(SIGSEGV, WidebrightSegvHandler); // SIGSEGV      11       Core    Invalid memory reference
+	signal(SIGABRT, WidebrightSegvHandler); // SIGABRT       6       Core    Abort signal from
 
-//	return testaac1();
-
-//	return testaac2();
+//	return testts1();
+//	return testts2();
+//	return testts3();
 
 //	return testaac3();
 
-	return testaac4();
+//	return testaac4();
+
+	return testaac5();
 }
