@@ -80,7 +80,7 @@ int ffmpegmux_addaudiostream(void* handle, int sample_rate, int channels)
     output_codec_context->sample_rate = sample_rate;
     output_codec_context->channels = channels;
 //    output_codec_context->channel_layout = av_get_default_channel_layout(output_codec_context->channels);
-/    output_codec_context->channel_layout = AV_CH_LAYOUT_STEREO;
+    output_codec_context->channel_layout = AV_CH_LAYOUT_STEREO;
     output_codec_context->sample_fmt = AV_SAMPLE_FMT_FLTP;
 
     if (inst->output_format_context->oformat->flags & AVFMT_GLOBALHEADER) {

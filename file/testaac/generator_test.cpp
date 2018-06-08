@@ -68,9 +68,7 @@ int testaac5()
 		{
 			const char *packet = NULL;
 			int packetlength = 0;
-			printf("ffmpeg_enc_encode_audio 1 \n");
 			ffmpeg_enc_encode_audio(enchandle, frame, length, &packet, &packetlength);
-			printf("ffmpeg_enc_encode_audio 2 \n");
 			if( packetlength > 0 )
 				fs.write(packet,packetlength);
 		}

@@ -24,6 +24,8 @@ struct ffmpeg_enc_tag_t
  	AVCodec *pCodec;
     AVFrame *video_frame;
     AVFrame *audio_frame;
+
+    uint8_t * audio_frame_buf;
 };
 
 static AVFrame *alloc_picture(enum AVPixelFormat pix_fmt, int width, int height)
@@ -84,6 +86,7 @@ void *ffmpeg_enc_alloc(int codecid)
     
     /* find the video encoder */  
     codecid = AV_CODEC_ID_AAC;
+
     AVCodec *pCodec = avcodec_find_encoder((AVCodecID)codecid);//AV_CODEC_ID_H264);        
     if (!pCodec)   
     {  
@@ -99,6 +102,7 @@ void *ffmpeg_enc_alloc(int codecid)
 	inst->pCodec = pCodec;
     inst->audio_frame = NULL;
     inst->video_frame = NULL;
+    inst->audio_frame_buf = NULL;
     return inst;
 }
 
@@ -162,8 +166,8 @@ int ffmpeg_enc_set_audio(void *handle, int sample_rate, int nb_samples, int chan
 //    inst->audio_frame = alloc_audio_frame(AV_SAMPLE_FMT_S16, AV_CH_LAYOUT_STEREO,sample_rate, nb_samples);
 
     int size = av_samples_get_buffer_size(NULL, pCodecCtx->channels,pCodecCtx->frame_size,pCodecCtx->sample_fmt, 1);
-    uint8_t * frame_buf = (uint8_t *)av_malloc(size);
-    avcodec_fill_audio_frame(inst->audio_frame, pCodecCtx->channels, pCodecCtx->sample_fmt,(const uint8_t*)frame_buf, size, 1);
+    inst->audio_frame_buf = (uint8_t *)av_malloc(size);
+    avcodec_fill_audio_frame(inst->audio_frame, pCodecCtx->channels, pCodecCtx->sample_fmt,(const uint8_t*)inst->audio_frame_buf, size, 1);
 
     return 0;
 }
@@ -175,8 +179,7 @@ int ffmpeg_enc_encode_audio(void *handle, const char* framedata, int length,
     if( !inst->audio_frame )
         return -1;
 
-    memcpy(inst->audio_frame->data[0],framedata, length);
-    printf("avcodec_encode_audio2 %d %d \n", inst->audio_frame->linesize[0], length);
+    memcpy(inst->audio_frame_buf,framedata, length);
 
     AVPacket pkt = { 0 };
     av_init_packet(&pkt);
@@ -186,6 +189,7 @@ int ffmpeg_enc_encode_audio(void *handle, const char* framedata, int length,
         fprintf(stderr, "Error encoding audio frame: %s\n", av_err2str(ret));
         return -1;
     }
+    printf("avcodec_encode_audio2 %d %d %d %d\n", inst->audio_frame->linesize[0], length, pkt.size, got_packet);
 
     if( !got_packet )
         return -2;
