@@ -57,7 +57,7 @@ int testaac5()
 	void *resamplehandle = resample_open(2, 1, 64000);
 
 	void* enchandle = ffmpeg_enc_alloc();
-	ffmpeg_enc_set_audio(enchandle, 1, 44100, 1024, 2);
+	ffmpeg_enc_set_audio(enchandle, "libfdk_aac", 44100, 1024, 2);
 
 	std::fstream fs;
 	fs.open("1.aac", std::ios::binary|std::ios::out);

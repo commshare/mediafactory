@@ -41,5 +41,5 @@ int main()
 
 	return testaac5();
  
-//    return testaac6();
+    return testaac6();
 }
