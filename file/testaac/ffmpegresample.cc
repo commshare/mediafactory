@@ -28,6 +28,7 @@ struct resampledesc_t
 
 	std::string buffer;
 	AVFrame *audio_frame;
+	AVFrame *src_audio_frame;
 };
 
 static AVFrame *alloc_audio_frame(enum AVSampleFormat sample_fmt,
@@ -139,10 +140,12 @@ void* resample_open(int in_channels,int in_sample_fmt,int in_sample_rate)
 
     inst->audio_frame = alloc_audio_frame(AV_SAMPLE_FMT_FLTP, AV_CH_LAYOUT_STEREO,
                                        in_sample_rate, out_nb_samples);
+    inst->src_audio_frame = alloc_audio_frame(AV_SAMPLE_FMT_S16, AV_CH_LAYOUT_STEREO,
+                                       in_sample_rate, out_nb_samples);
 	return inst;
 }
 
-int resample_sound(void* handle, uint8_t **data, int linesize, int samplecount, sound_resampled *frame)
+int resample_sound(void* handle, uint8_t *data, int linesize, int samplecount, sound_resampled *frame)
 {
 	resampledesc_t * inst = (resampledesc_t*)handle;
 
@@ -150,8 +153,12 @@ int resample_sound(void* handle, uint8_t **data, int linesize, int samplecount, 
 //		(const uint8_t**)data, samplecount);  
 //	int out_samples = swr_convert(inst->pResampleCtx, NULL,0, 
 //		(const uint8_t**)data, samplecount);  
+//	int out_samples = swr_convert(inst->pResampleCtx, inst->audio_frame->data,samplecount, 
+//		(const uint8_t**)&data, samplecount);  
+
+	memcpy(inst->src_audio_frame->data[0], data, linesize);
 	int out_samples = swr_convert(inst->pResampleCtx, inst->audio_frame->data,samplecount, 
-		(const uint8_t**)data, samplecount);  
+		(const uint8_t**)inst->src_audio_frame->data, samplecount);  
 	if (out_samples < 0) 
 	{
 		printf("swr_convert error \n");

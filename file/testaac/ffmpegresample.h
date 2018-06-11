@@ -9,7 +9,7 @@ struct sound_resampled
 
 void* resample_open(int in_channels,int in_sample_fmt,int in_sample_rate);
 
-int resample_sound(void* handle, uint8_t **data, int linesize, int samplecount, sound_resampled *frame);
+int resample_sound(void* handle, uint8_t *data, int linesize, int samplecount, sound_resampled *frame);
 
 int resample_close(void* handle);
 

@@ -146,8 +146,9 @@ int ffmpeg_enc_set_audio(void *handle, int codecid, int sample_rate, int nb_samp
 {
 	ffmpeg_enc_tag_t *inst = (ffmpeg_enc_tag_t*)handle;
 
-    codecid = AV_CODEC_ID_AAC;
-    AVCodec *pCodec = avcodec_find_encoder((AVCodecID)codecid);//AV_CODEC_ID_H264);        
+    AVCodec* pCodec = avcodec_find_encoder_by_name("libfdk_aac");
+//    codecid = AV_CODEC_ID_AAC;
+//    AVCodec *pCodec = avcodec_find_encoder((AVCodecID)codecid);//AV_CODEC_ID_H264);        
     if (!pCodec)   
     {  
         printf("codec not found! \n");  
@@ -156,6 +157,7 @@ int ffmpeg_enc_set_audio(void *handle, int codecid, int sample_rate, int nb_samp
       
     //初始化参数，下面的参数应该由具体的业务决定  
     AVCodecContext *pCodecCtx = avcodec_alloc_context3(pCodec);   
+    avcodec_get_context_defaults3(pCodecCtx, pCodec);
     inst->pCodecCtx = pCodecCtx;
     inst->pCodec = pCodec;
 
@@ -173,10 +175,8 @@ int ffmpeg_enc_set_audio(void *handle, int codecid, int sample_rate, int nb_samp
     pCodecCtx->sample_rate = sample_rate;
     pCodecCtx->channels = channels;
 //    output_codec_context->channel_layout = av_get_default_channel_layout(output_codec_context->channels);
-//    pCodecCtx->channel_layout = AV_CH_LAYOUT_STEREO;
-    pCodecCtx->sample_fmt = AV_SAMPLE_FMT_FLTP;
-    pCodecCtx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
-    pCodecCtx->profile = FF_PROFILE_AAC_MAIN;
+    pCodecCtx->channel_layout = AV_CH_LAYOUT_STEREO;
+    pCodecCtx->sample_fmt = AV_SAMPLE_FMT_S16;//AV_SAMPLE_FMT_FLTP;
 
     if(avcodec_open2(pCodecCtx, inst->pCodec, NULL) < 0)  
     {

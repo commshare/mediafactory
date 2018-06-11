@@ -3,6 +3,7 @@
 #include "video_generator.h"
 #include "ffmpeg_enc.h"
 #include "ffmpegresample.h"
+#include "ffmpeg_mux.h"
 
 //ffplay -ar 16000 -channels 1 -f s16le -i xxx.pcm
 int testaac3()
@@ -69,26 +70,11 @@ int testaac5()
 		audio_generator_get_audio_frame(handle, &frame, &length);
 		if( length > 0 )
 		{
-/*
 			const char *packet = NULL;
 			int packetlength = 0;
 			ffmpeg_enc_encode_audio(enchandle, (const char*)frame, length, &packet, &packetlength);
 			if( packetlength > 0 )
 				fs.write(packet,packetlength);				
-*/
-			resample.linesize = 0;
-			printf("audio_generator_get_audio_frame length %d\n", length);
-			resample_sound(resamplehandle, (uint8_t**)&frame, 0, 1024, &resample);
-			if( resample.linesize > 0 )
-			{
-				const char *packet = NULL;
-				int packetlength = 0;
-				ffmpeg_enc_encode_audio(enchandle, (const char*)resample.data, resample.linesize, &packet, &packetlength);
-				if( packetlength > 0 )
-					fs.write(packet,packetlength);				
-
-			}
-
 		}
 
 		usleep(100 * 1000);

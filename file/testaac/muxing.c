@@ -67,6 +67,7 @@ typedef struct OutputStream {
     struct SwrContext *swr_ctx;
 } OutputStream;
 
+FILE *aacFile = NULL;
 static void log_packet(const AVFormatContext *fmt_ctx, const AVPacket *pkt)
 {
     AVRational *time_base = &fmt_ctx->streams[pkt->stream_index]->time_base;
@@ -359,6 +360,8 @@ static int write_audio_frame(AVFormatContext *oc, OutputStream *ost)
     }
 
     if (got_packet) {
+        fwrite(pkt.data, pkt.size, 1, aacFile);
+
         ret = write_frame(oc, &c->time_base, ost->st, &pkt);
         if (ret < 0) {
             fprintf(stderr, "Error while writing audio frame: %s\n",
@@ -559,6 +562,7 @@ static void close_stream(AVFormatContext *oc, OutputStream *ost)
 
 int main(int argc, char **argv)
 {
+    aacFile = fopen("aac.aac", "wb");
     OutputStream video_st = { 0 }, audio_st = { 0 };
     const char *filename;
     AVOutputFormat *fmt;
