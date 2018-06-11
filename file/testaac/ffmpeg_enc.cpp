@@ -17,6 +17,8 @@ extern "C" {
 }    
 #endif
 
+#define STREAM_FRAME_RATE 25 /* 25 images/s */
+
 struct ffmpeg_enc_tag_t
 {
 	std::string videoframe,audioframe;
@@ -26,6 +28,7 @@ struct ffmpeg_enc_tag_t
     AVFrame *audio_frame;
 
     uint8_t * audio_frame_buf;
+    uint8_t *picture_buf;
 };
 
 static AVFrame *alloc_picture(enum AVPixelFormat pix_fmt, int width, int height)
@@ -79,14 +82,25 @@ static AVFrame *alloc_audio_frame(enum AVSampleFormat sample_fmt,
     return frame;
 }
 //////////////////////////////////////////////////////////////
-void *ffmpeg_enc_alloc(int codecid)
+void *ffmpeg_enc_alloc()
 {
     av_register_all();
     av_log_set_level(AV_LOG_DEBUG);
     
-    /* find the video encoder */  
-    codecid = AV_CODEC_ID_AAC;
+	ffmpeg_enc_tag_t *inst = new ffmpeg_enc_tag_t;
+	inst->pCodecCtx = NULL;
+	inst->pCodec = NULL;
+    inst->audio_frame = NULL;
+    inst->video_frame = NULL;
+    inst->audio_frame_buf = NULL;
+    return inst;
+}
 
+int ffmpeg_enc_set_video(void *handle, int codecid, int width, int height, int pixel_format)
+{      
+	ffmpeg_enc_tag_t *inst = (ffmpeg_enc_tag_t*)handle;
+
+    codecid = AV_CODEC_ID_H264;
     AVCodec *pCodec = avcodec_find_encoder((AVCodecID)codecid);//AV_CODEC_ID_H264);        
     if (!pCodec)   
     {  
@@ -96,29 +110,21 @@ void *ffmpeg_enc_alloc(int codecid)
       
     //初始化参数，下面的参数应该由具体的业务决定  
     AVCodecContext *pCodecCtx = avcodec_alloc_context3(pCodec);    
-
-	ffmpeg_enc_tag_t *inst = new ffmpeg_enc_tag_t;
-	inst->pCodecCtx = pCodecCtx;
-	inst->pCodec = pCodec;
-    inst->audio_frame = NULL;
-    inst->video_frame = NULL;
-    inst->audio_frame_buf = NULL;
-    return inst;
-}
-
-int ffmpeg_enc_set_video(void *handle, int width, int height, int pixel_format)
-{      
-	ffmpeg_enc_tag_t *inst = (ffmpeg_enc_tag_t*)handle;
+    inst->pCodecCtx = pCodecCtx;
+    inst->pCodec = pCodec;
 
 	//初始化参数，下面的参数应该由具体的业务决定  
-    AVCodecContext *pCodecCtx = inst->pCodecCtx;
 //    pCodecCtx->time_base.num = 1;  
 //    pCodecCtx->frame_number = 1; //每包一个视频帧  
-//    pCodecCtx->codec_type = AVMEDIA_TYPE_VIDEO;  
+    pCodecCtx->codec_type = AVMEDIA_TYPE_VIDEO;  
+    pCodecCtx->codec_id = AV_CODEC_ID_H264;
+    pCodecCtx->pix_fmt = AV_PIX_FMT_YUV420P;  
 //    pCodecCtx->bit_rate = 0;  
 //    pCodecCtx->time_base.den = 30;//帧率  
-//    pCodecCtx->width = width;//视频宽  
-//    pCodecCtx->height = height;//视频高  
+    pCodecCtx->width = width;//视频宽  
+    pCodecCtx->height = height;//视频高  
+
+    pCodecCtx->time_base       = (AVRational){ 1, STREAM_FRAME_RATE };
 
     if(avcodec_open2(pCodecCtx, inst->pCodec, NULL) < 0)  
     {
@@ -127,16 +133,33 @@ int ffmpeg_enc_set_video(void *handle, int width, int height, int pixel_format)
     }
 
     inst->video_frame = alloc_picture(AV_PIX_FMT_YUV420P, width, height);
+    inst->video_frame->pts = 0;
+    
+    int picture_size = avpicture_get_size(pCodecCtx->pix_fmt, pCodecCtx->width, pCodecCtx->height);  
+    inst->picture_buf = (uint8_t *)av_malloc(picture_size);  
+    avpicture_fill((AVPicture *)inst->video_frame, inst->picture_buf, pCodecCtx->pix_fmt, pCodecCtx->width, pCodecCtx->height);
 
     return 0;
 }
 
-int ffmpeg_enc_set_audio(void *handle, int sample_rate, int nb_samples, int channels)
+int ffmpeg_enc_set_audio(void *handle, int codecid, int sample_rate, int nb_samples, int channels)
 {
 	ffmpeg_enc_tag_t *inst = (ffmpeg_enc_tag_t*)handle;
 
+    codecid = AV_CODEC_ID_AAC;
+    AVCodec *pCodec = avcodec_find_encoder((AVCodecID)codecid);//AV_CODEC_ID_H264);        
+    if (!pCodec)   
+    {  
+        printf("codec not found! \n");  
+        return NULL;  
+    }  
+      
     //初始化参数，下面的参数应该由具体的业务决定  
-	AVCodecContext *pCodecCtx = inst->pCodecCtx;
+    AVCodecContext *pCodecCtx = avcodec_alloc_context3(pCodec);   
+    inst->pCodecCtx = pCodecCtx;
+    inst->pCodec = pCodec;
+
+    //初始化参数，下面的参数应该由具体的业务决定  
 //    pCodecCtx->time_base.num = 1;  
 //    pCodecCtx->frame_number = 1; //每包一个视频帧  
     pCodecCtx->codec_type = AVMEDIA_TYPE_AUDIO;  
@@ -150,9 +173,11 @@ int ffmpeg_enc_set_audio(void *handle, int sample_rate, int nb_samples, int chan
     pCodecCtx->sample_rate = sample_rate;
     pCodecCtx->channels = channels;
 //    output_codec_context->channel_layout = av_get_default_channel_layout(output_codec_context->channels);
-    pCodecCtx->channel_layout = AV_CH_LAYOUT_STEREO;
+//    pCodecCtx->channel_layout = AV_CH_LAYOUT_STEREO;
     pCodecCtx->sample_fmt = AV_SAMPLE_FMT_FLTP;
-    
+    pCodecCtx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+    pCodecCtx->profile = FF_PROFILE_AAC_MAIN;
+
     if(avcodec_open2(pCodecCtx, inst->pCodec, NULL) < 0)  
     {
         printf("open codec failed \n");  
@@ -160,12 +185,14 @@ int ffmpeg_enc_set_audio(void *handle, int sample_rate, int nb_samples, int chan
     }
     
     inst->audio_frame = av_frame_alloc();
+    inst->audio_frame->pts = 0;
     inst->audio_frame->nb_samples= pCodecCtx->frame_size;
     inst->audio_frame->format= pCodecCtx->sample_fmt;
 
 //    inst->audio_frame = alloc_audio_frame(AV_SAMPLE_FMT_S16, AV_CH_LAYOUT_STEREO,sample_rate, nb_samples);
 
-    int size = av_samples_get_buffer_size(NULL, pCodecCtx->channels,pCodecCtx->frame_size,pCodecCtx->sample_fmt, 1);
+    int size = av_samples_get_buffer_size(NULL, pCodecCtx->channels,
+            pCodecCtx->frame_size, pCodecCtx->sample_fmt, 1);
     inst->audio_frame_buf = (uint8_t *)av_malloc(size);
     avcodec_fill_audio_frame(inst->audio_frame, pCodecCtx->channels, pCodecCtx->sample_fmt,(const uint8_t*)inst->audio_frame_buf, size, 1);
 
@@ -180,6 +207,7 @@ int ffmpeg_enc_encode_audio(void *handle, const char* framedata, int length,
         return -1;
 
     memcpy(inst->audio_frame_buf,framedata, length);
+    inst->audio_frame->pts++;
 
     AVPacket pkt = { 0 };
     av_init_packet(&pkt);
@@ -189,18 +217,19 @@ int ffmpeg_enc_encode_audio(void *handle, const char* framedata, int length,
         fprintf(stderr, "Error encoding audio frame: %s\n", av_err2str(ret));
         return -1;
     }
-    printf("avcodec_encode_audio2 %d %d %d %d\n", inst->audio_frame->linesize[0], length, pkt.size, got_packet);
+    printf("avcodec_encode_audio2 %d %d %d %d %d\n", inst->audio_frame->linesize[0],inst->audio_frame->linesize[1], 
+        length, pkt.size, got_packet);
 
     if( !got_packet )
         return -2;
 
     inst->audioframe.clear();
     inst->audioframe.append((const char*)pkt.data, pkt.size);
+    av_free_packet(&pkt);
 
     *packetdata = inst->audioframe.data();
     *packetlength = inst->audioframe.size();
 
-    av_free_packet(&pkt);
     return 0;
 }
 
@@ -208,6 +237,9 @@ int ffmpeg_enc_encode_video(void *handle, const char* framedata, int length,
             const char **packetdata, int *packetlength)
 {
 	ffmpeg_enc_tag_t *inst = (ffmpeg_enc_tag_t*)handle;
+
+    memcpy(inst->picture_buf,framedata, length);
+    inst->video_frame->pts++;
 
     AVPacket pkt = { 0 };
     av_init_packet(&pkt);

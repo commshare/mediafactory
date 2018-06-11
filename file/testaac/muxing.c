@@ -339,6 +339,9 @@ static int write_audio_frame(AVFormatContext *oc, OutputStream *ost)
             ret = swr_convert(ost->swr_ctx,
                               ost->frame->data, dst_nb_samples,
                               (const uint8_t **)frame->data, frame->nb_samples);
+
+            fprintf(stderr, "ost->frame->linesize:%d %d frame->linesize:%d\n", 
+                ost->frame->linesize[0], ost->frame->linesize[1], frame->linesize[0]);
             if (ret < 0) {
                 fprintf(stderr, "Error while converting\n");
                 exit(1);

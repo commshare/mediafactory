@@ -2,6 +2,7 @@
 #include "audio_generator.h"
 #include "video_generator.h"
 #include "ffmpeg_enc.h"
+#include "ffmpegresample.h"
 
 //ffplay -ar 16000 -channels 1 -f s16le -i xxx.pcm
 int testaac3()
@@ -52,13 +53,15 @@ int testaac4()
 int testaac5()
 {
 	void* handle = audio_generator_alloc(44100, 16, 2, 1024);
+	void *resamplehandle = resample_open(2, 1, 64000);
 
-	void* enchandle = ffmpeg_enc_alloc(1);
-	ffmpeg_enc_set_audio(enchandle, 44100, 1024, 2);
+	void* enchandle = ffmpeg_enc_alloc();
+	ffmpeg_enc_set_audio(enchandle, 1, 44100, 1024, 2);
 
 	std::fstream fs;
 	fs.open("1.aac", std::ios::binary|std::ios::out);
 
+	sound_resampled resample;	
 	while( 1 )
 	{
 		const char *frame = NULL;
@@ -66,11 +69,57 @@ int testaac5()
 		audio_generator_get_audio_frame(handle, &frame, &length);
 		if( length > 0 )
 		{
+/*
 			const char *packet = NULL;
 			int packetlength = 0;
-			ffmpeg_enc_encode_audio(enchandle, frame, length, &packet, &packetlength);
+			ffmpeg_enc_encode_audio(enchandle, (const char*)frame, length, &packet, &packetlength);
 			if( packetlength > 0 )
-				fs.write(packet,packetlength);
+				fs.write(packet,packetlength);				
+*/
+			resample.linesize = 0;
+			printf("audio_generator_get_audio_frame length %d\n", length);
+			resample_sound(resamplehandle, (uint8_t**)&frame, 0, 1024, &resample);
+			if( resample.linesize > 0 )
+			{
+				const char *packet = NULL;
+				int packetlength = 0;
+				ffmpeg_enc_encode_audio(enchandle, (const char*)resample.data, resample.linesize, &packet, &packetlength);
+				if( packetlength > 0 )
+					fs.write(packet,packetlength);				
+
+			}
+
+		}
+
+		usleep(100 * 1000);
+	}
+
+	return 0;
+}
+
+int testaac6()
+{
+	void* handle = video_generator_alloc(352, 288, 1);
+
+	void* enchandle = ffmpeg_enc_alloc();
+	ffmpeg_enc_set_video(enchandle, 1, 352, 288, 2);
+
+	std::fstream fs;
+	fs.open("1.h264", std::ios::binary|std::ios::out);
+
+	sound_resampled resample;	
+	while( 1 )
+	{
+		const char *frame = NULL;
+		int length = 0;
+		video_generator_get_yuv420p_frame(handle, &frame, &length);
+		if( length > 0 )
+		{
+			const char *packet = NULL;
+			int packetlength = 0;
+			ffmpeg_enc_encode_video(enchandle, frame, length, &packet, &packetlength);
+			if( packetlength > 0 )
+				fs.write(packet,packetlength);				
 		}
 
 		usleep(100 * 1000);
