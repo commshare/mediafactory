@@ -178,13 +178,11 @@ int ffmpeg_enc_set_audio(void *handle, const char* codecname, int sample_rate, i
     }
     
     inst->audio_frame = alloc_audio_frame(pCodecCtx, nb_samples);
-/*
-    int size = av_samples_get_buffer_size(NULL, pCodecCtx->channels,
-            pCodecCtx->frame_size, pCodecCtx->sample_fmt, 1);
-    inst->audio_frame_buf = (uint8_t *)av_malloc(size);
-    avcodec_fill_audio_frame(inst->audio_frame, pCodecCtx->channels, pCodecCtx->sample_fmt,
-        (const uint8_t*)inst->audio_frame_buf, size, 1);
-*/
+    if( !inst->audio_frame )
+    {
+        printf("alloc_audio_frame failed \n");  
+        return -1;  
+    }
     return 0;
 }
 
