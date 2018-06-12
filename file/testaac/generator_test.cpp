@@ -88,7 +88,7 @@ int testaac6()
 	void* handle = video_generator_alloc(352, 288, 1);
 
 	void* enchandle = ffmpeg_enc_alloc();
-	ffmpeg_enc_set_video(enchandle, 1, 352, 288, 2);
+	ffmpeg_enc_set_video(enchandle, "libx264", 352, 288, 2);
 
 	std::fstream fs;
 	fs.open("1.h264", std::ios::binary|std::ios::out);

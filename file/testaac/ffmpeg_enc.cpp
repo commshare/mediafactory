@@ -101,12 +101,13 @@ void *ffmpeg_enc_alloc()
     return inst;
 }
 
-int ffmpeg_enc_set_video(void *handle, int codecid, int width, int height, int pixel_format)
+int ffmpeg_enc_set_video(void *handle, const char* codecname, int width, int height, int pixel_format)
 {      
 	ffmpeg_enc_tag_t *inst = (ffmpeg_enc_tag_t*)handle;
 
-    codecid = AV_CODEC_ID_H264;
-    AVCodec *pCodec = avcodec_find_encoder((AVCodecID)codecid);//AV_CODEC_ID_H264);        
+    AVCodec* pCodec = avcodec_find_encoder_by_name(codecname);
+//    codecid = AV_CODEC_ID_H264;
+//    AVCodec *pCodec = avcodec_find_encoder((AVCodecID)codecid);//AV_CODEC_ID_H264);        
     if (!pCodec)   
     {  
         printf("codec not found! \n");  

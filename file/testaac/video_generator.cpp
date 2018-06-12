@@ -28,8 +28,8 @@ void *video_generator_alloc(int width, int height, int pixel_format)
 	inst->pixel_format = pixel_format;
 
 	inst->linesizeY = inst->width;
-	inst->linesizeU = inst->linesizeY / 4;
-	inst->linesizeV = inst->linesizeY / 4;
+	inst->linesizeU = inst->linesizeY / 2;
+	inst->linesizeV = inst->linesizeY / 2;
 
 	inst->frameY.resize(inst->width * inst->height);
 	inst->frameU.resize(inst->width * inst->height / 4);
