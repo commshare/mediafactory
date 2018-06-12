@@ -10,7 +10,8 @@ int ffmpegmux_addaudiostream(void* handle, int sample_rate, int channels);
 
 int ffmpegmux_open(void* handle);
 
-int ffmpegmux_write_frame(void *handle, int stream_index, const char* frame, int length, uint64_t pts);
+int ffmpegmux_write_video_frame(void *handle, const char* frame, int length, uint64_t pts);
+int ffmpegmux_write_audio_frame(void *handle, const char* frame, int length, uint64_t pts);
 
 int ffmpegmux_destroy(void* handle);
 

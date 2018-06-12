@@ -102,7 +102,7 @@ int testts2()
 		if( ret < 0 )
 			continue;
 		printf("ffmpegmux_write_audio frame \n");
-		ffmpegmux_write_frame(muxhandle, 1, frame, length, audiopts);
+		ffmpegmux_write_audio_frame(muxhandle, frame, length, audiopts);
 		audiopts+=3600;
 
 		ret = H264Demux_GetFrame(h264handle, &h264frame, &framelength);
@@ -135,7 +135,7 @@ int testts2()
 		}
 
 		printf("ffmpegmux_write_video frame \n");
-		ffmpegmux_write_frame(muxhandle, 0, h264frame, framelength, pts);
+		ffmpegmux_write_video_frame(muxhandle, h264frame, framelength, pts);
 
 		pts += 3600;
 		usleep(100 * 1000);

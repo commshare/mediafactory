@@ -81,6 +81,8 @@ static void log_packet(const AVFormatContext *fmt_ctx, const AVPacket *pkt)
 
 static int write_frame(AVFormatContext *fmt_ctx, const AVRational *time_base, AVStream *st, AVPacket *pkt)
 {
+    printf("timebase1 %d %d time_base2 %d %d \n", 
+        time_base->num, time_base->den, st->time_base.num, st->time_base.den);
     /* rescale output packet timestamp values from codec to stream timebase */
     av_packet_rescale_ts(pkt, *time_base, st->time_base);
     pkt->stream_index = st->index;

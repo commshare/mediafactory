@@ -53,12 +53,12 @@ int ffmpegmux_addvideostream(void* handle, int width, int height)
     }
 
     /* copy the stream parameters to the muxer */
-/*
+
     int ret = avcodec_parameters_from_context(output_stream->codecpar, output_stream->codec);
     if (ret < 0) {
         printf("Could not copy the stream parameters\n");
     }
-*/
+
     return 0;
 }
 
@@ -88,12 +88,12 @@ int ffmpegmux_addaudiostream(void* handle, int sample_rate, int channels)
     }
 
     /* copy the stream parameters to the muxer */
-/*
+
     int ret = avcodec_parameters_from_context(output_stream->codecpar, output_stream->codec);
     if (ret < 0) {
         printf("Could not copy the stream parameters\n");
     }
-*/
+
     return 0;
 }
 
@@ -114,13 +114,13 @@ int ffmpegmux_open(void* handle)
     return 0;
 }
 
-int ffmpegmux_write_frame(void *handle, int stream_index, const char* frame, int length, uint64_t pts)
+int ffmpegmux_write_video_frame(void *handle, const char* frame, int length, uint64_t pts)
 {
 	ffmpegmux_tag_t *inst = (ffmpegmux_tag_t*)handle;
 
     AVPacket packet = {0};        
     av_init_packet(&packet);
-    packet.stream_index = stream_index;
+    packet.stream_index = inst->video_st->index;
     packet.data = (uint8_t*)frame;//这里填入一个指向完整H264数据帧的指针  
     packet.size = length;//这个填入H264数据帧的大小  
     packet.pts = packet.dts = pts;
@@ -136,6 +136,30 @@ int ffmpegmux_write_frame(void *handle, int stream_index, const char* frame, int
     }
 
 	return 0;
+}
+
+int ffmpegmux_write_audio_frame(void *handle, const char* frame, int length, uint64_t pts)
+{
+    ffmpegmux_tag_t *inst = (ffmpegmux_tag_t*)handle;
+
+    AVPacket packet = {0};        
+    av_init_packet(&packet);
+    packet.stream_index = inst->audio_st->index;;
+    packet.data = (uint8_t*)frame;//这里填入一个指向完整H264数据帧的指针  
+    packet.size = length;//这个填入H264数据帧的大小  
+    packet.pts = packet.dts = pts;
+
+    int ret = av_interleaved_write_frame(inst->output_format_context, &packet);
+    if (ret < 0) {
+        printf("Call av_interleaved_write_frame function failed\n");
+        return -1;
+    }
+    else if (ret > 0) {
+        printf("End of stream requested\n");
+        return -1;
+    }
+
+    return 0;
 }
 
 int ffmpegmux_destroy(void* handle)
