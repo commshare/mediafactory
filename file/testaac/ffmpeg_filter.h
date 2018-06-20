@@ -19,11 +19,11 @@ int ffmpeg_filter_set_video(void *handle, int width, int height, int pixel_forma
 int ffmpeg_filter_set_audio(void *handle, int sample_rate, int channels, 
 	int sample_fmt, int nb_samples);
 
-int ffmpeg_filter_set_audio_data(void *handle, char* data, int length);
-int ffmpeg_filter_get_audio_data(void *handle, char** data, int *length);
+int ffmpeg_filter_set_audio_data(void *handle, const char* data, int length);
+int ffmpeg_filter_get_audio_data(void *handle, const char** data, int *length);
 
-int ffmpeg_filter_set_video_data(void *handle, char* data, int length);
-int ffmpeg_filter_get_video_data(void *handle, char** data, int *length);
+int ffmpeg_filter_set_video_data(void *handle, const char* data, int length);
+int ffmpeg_filter_get_video_data(void *handle, const char** data, int *length);
 
 int ffmpeg_filter_destroy(void *handle);
 

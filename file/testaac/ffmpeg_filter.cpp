@@ -44,7 +44,7 @@ struct ffmpeg_filter_tag_t
     uint8_t *picture_buf;
 };
 
-static AVFrame *alloc_picture(int width, int height, int pix_fmt)
+static AVFrame *alloc_picture(int width, int height, AVPixelFormat pix_fmt)
 {
     AVFrame *picture = av_frame_alloc();
     if (!picture)
@@ -68,7 +68,7 @@ static AVFrame *alloc_picture(int width, int height, int pix_fmt)
 */
     return picture;
 }
-static AVFrame *alloc_audio_frame(int sample_rate, int channels, int sample_fmt, int nb_samples)
+static AVFrame *alloc_audio_frame(int sample_rate, int channels, AVSampleFormat sample_fmt, int nb_samples)
 {
     AVFrame *frame = av_frame_alloc();
     if (!frame) {
@@ -139,6 +139,7 @@ static int link_filter(AVFilterContext *src_filter_ctx, AVFilterContext *dst_fil
 void *ffmpeg_filter_alloc()
 {
     av_register_all();
+    avfilter_register_all();
     av_log_set_level(AV_LOG_DEBUG);
     
     AVFilterGraph *filter_graph = avfilter_graph_alloc();
@@ -149,10 +150,8 @@ void *ffmpeg_filter_alloc()
     }
 
 	ffmpeg_filter_tag_t *inst = new ffmpeg_filter_tag_t;
-    inst->pCodecCtx = NULL;
-	inst->pCodec = NULL;
-    inst->audio_frame = inst->audio_output_frame = NULL;
-    inst->video_frame = inst->video_output_frame = NULL;
+    inst->audio_input_frame = inst->audio_output_frame = NULL;
+    inst->video_input_frame = inst->video_output_frame = NULL;
     inst->audio_frame_buf = NULL;
     inst->filter_graph = filter_graph;
 
@@ -168,7 +167,7 @@ void* ffmpeg_filter_alloc_filter(void *handle, const char* filter_name,
 
 int ffmpeg_filter_link_filter(void *src_filter, void* dst_filter)
 {
-    return link_filter(src_filter, dst_filter);
+    return link_filter((AVFilterContext*)src_filter, (AVFilterContext*)dst_filter);
 }
 
 int ffmpeg_filter_set_video_source_filter(void *handle, void* source_filter)
@@ -181,7 +180,12 @@ int ffmpeg_filter_set_video_source_filter(void *handle, void* source_filter)
 int ffmpeg_filter_set_video_sink_filter(void *handle, void* sink_filter)
 {
     ffmpeg_filter_tag_t *inst = (ffmpeg_filter_tag_t*)handle;
+    enum AVPixelFormat pix_fmts[] = { AV_PIX_FMT_YUV420P, AV_PIX_FMT_NONE };
+    av_opt_set_int_list((AVFilterContext*)sink_filter, "pix_fmts", pix_fmts,
+                      AV_PIX_FMT_NONE, AV_OPT_SEARCH_CHILDREN);
+
     inst->video_buffersink_ctx = (AVFilterContext*)sink_filter;
+
     return 0;
 }
 
@@ -213,7 +217,7 @@ int ffmpeg_filter_set_video(void *handle, int width, int height, int pixel_forma
 {      
 	ffmpeg_filter_tag_t *inst = (ffmpeg_filter_tag_t*)handle;
 
-    inst->video_input_frame = alloc_picture(width, height, pix_fmt);
+    inst->video_input_frame = alloc_picture(width, height, (AVPixelFormat)pixel_format);
     if( !inst->video_input_frame )
     {
         printf("alloc_picture failed \n");  
@@ -233,7 +237,7 @@ int ffmpeg_filter_set_audio(void *handle, int sample_rate, int channels, int sam
 {
 	ffmpeg_filter_tag_t *inst = (ffmpeg_filter_tag_t*)handle;
 
-    inst->audio_input_frame = alloc_audio_frame(sample_rate, channels, sample_fmt, nb_samples);
+    inst->audio_input_frame = alloc_audio_frame(sample_rate, channels, (AVSampleFormat)sample_fmt, nb_samples);
     if( !inst->audio_input_frame )
     {
         printf("alloc_audio_frame failed \n");  
@@ -249,7 +253,7 @@ int ffmpeg_filter_set_audio(void *handle, int sample_rate, int channels, int sam
     return 0;
 }
 
-int ffmpeg_filter_set_audio_data(void *handle, char* data, int length)
+int ffmpeg_filter_set_audio_data(void *handle, const char* data, int length)
 {
     ffmpeg_filter_tag_t *inst = (ffmpeg_filter_tag_t*)handle;
     if( !inst->audio_input_frame )
@@ -265,7 +269,7 @@ int ffmpeg_filter_set_audio_data(void *handle, char* data, int length)
     return 0;
 }
 
-int ffmpeg_filter_get_audio_data(void *handle, char** data, int *length)
+int ffmpeg_filter_get_audio_data(void *handle, const char** data, int *length)
 {
 	ffmpeg_filter_tag_t *inst = (ffmpeg_filter_tag_t*)handle;
     if( !inst->audio_input_frame )
@@ -286,7 +290,7 @@ int ffmpeg_filter_get_audio_data(void *handle, char** data, int *length)
     return 0;
 }
 
-int ffmpeg_filter_set_video_data(void *handle, char* data, int length)
+int ffmpeg_filter_set_video_data(void *handle, const char* data, int length)
 {
     ffmpeg_filter_tag_t *inst = (ffmpeg_filter_tag_t*)handle;
 
@@ -300,11 +304,13 @@ int ffmpeg_filter_set_video_data(void *handle, char* data, int length)
     return 0;
 }
 
-void *ffmpeg_filter_get_video_data(void *handle, char** data, int *length)
+int ffmpeg_filter_get_video_data(void *handle, const char** data, int *length)
 {
 	ffmpeg_filter_tag_t *inst = (ffmpeg_filter_tag_t*)handle;
 
+    printf("av_buffersink_get_frame 1 \n");
     int err = av_buffersink_get_frame(inst->video_buffersink_ctx, inst->video_output_frame);
+    printf("av_buffersink_get_frame 2 \n");
     if( err < 0 )
         return -1;
 
@@ -325,7 +331,7 @@ void *ffmpeg_filter_get_video_data(void *handle, char** data, int *length)
 
 }
 
-int ffmpeg_enc_destroy(void *handle)
+int ffmpeg_filter_destroy(void *handle)
 {
 	ffmpeg_filter_tag_t *inst = (ffmpeg_filter_tag_t*)handle;
 

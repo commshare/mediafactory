@@ -2,7 +2,7 @@ C 			 = c
 CPP 		 = cpp
 CXX = gcc
 CXXFLAGS = -w -g -D__STDC_CONSTANT_MACROS -I ../tsmux/
-LIBS =  -lstdc++ -lpthread -lavformat -lavutil
+LIBS =  -lstdc++ -lpthread -lavformat -lavutil -lavfilter
 
 TARGET0 = testaac
 
@@ -22,7 +22,8 @@ CPPOBJS = aacdemux.o \
 		ts_test.o \
 		tsfile.o \
 		ffmpeg_enc.o \
-		ffmpegresample.o
+		ffmpegresample.o \
+		ffmpeg_filter.o
 
 
 $(TARGET0):$(CPPOBJS) $(COBJS)

@@ -4,6 +4,7 @@
 #include "ffmpeg_enc.h"
 #include "ffmpegresample.h"
 #include "ffmpeg_mux.h"
+#include "ffmpeg_filter.h"
 
 //ffplay -ar 16000 -channels 1 -f s16le -i xxx.pcm
 int testaac3()
@@ -106,6 +107,42 @@ int testaac6()
 			ffmpeg_enc_encode_video(enchandle, frame, length, &packet, &packetlength);
 			if( packetlength > 0 )
 				fs.write(packet,packetlength);				
+		}
+
+		usleep(100 * 1000);
+	}
+
+	return 0;
+}
+
+int testaac7()
+{
+	void* filterhandle = ffmpeg_filter_alloc();
+	void *filter1 = ffmpeg_filter_alloc_filter(filterhandle, "testsrc", "testsrc", NULL);
+	if( !filter1 )
+	{
+		printf("alloc testsrc error \n");
+		return -1;
+	}
+	void *filter2 = ffmpeg_filter_alloc_filter(filterhandle, "buffersink", "buffersink", NULL);
+	ffmpeg_filter_link_filter(filter1, filter2);
+	ffmpeg_filter_set_video_sink_filter(filterhandle, filter2);
+	ffmpeg_filter_open(filterhandle);
+
+	std::fstream fs;
+	fs.open("1.h264", std::ios::binary|std::ios::out);
+
+	while( 1 )
+	{
+		const char *frame = NULL;
+		int length = 0;
+		printf("ffmpeg_filter_get_video_data \n");
+		while( ffmpeg_filter_get_video_data(filterhandle, &frame, &length) >= 0 )
+		{
+			if( length > 0 )
+			{
+				fs.write(frame,length);				
+			}			
 		}
 
 		usleep(100 * 1000);
