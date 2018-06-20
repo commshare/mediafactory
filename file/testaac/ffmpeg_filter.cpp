@@ -23,6 +23,9 @@ extern "C" {
 
 #define STREAM_FRAME_RATE 25 /* 25 images/s */
 
+#define INPUT_SAMPLERATE     48000
+#define INPUT_FORMAT         AV_SAMPLE_FMT_S16
+
 struct ffmpeg_filter_tag_t
 {
 	std::string videoframe,audioframe;
@@ -77,7 +80,8 @@ static AVFrame *alloc_audio_frame(int sample_rate, int channels, AVSampleFormat 
     }
 
     frame->format = sample_fmt;
-    frame->channel_layout = av_get_default_channel_layout(channels);;
+    frame->channels = channels;
+    frame->channel_layout = av_get_default_channel_layout(channels);
     frame->sample_rate = sample_rate;
     frame->nb_samples = nb_samples;
     frame->pts = 0;
@@ -195,6 +199,14 @@ int ffmpeg_filter_set_video_sink_filter(void *handle, void* sink_filter)
 int ffmpeg_filter_set_audio_source_filter(void *handle, void* source_filter)
 {
     ffmpeg_filter_tag_t *inst = (ffmpeg_filter_tag_t*)handle;
+
+    char ch_layout[64] = {0};
+    av_get_channel_layout_string(ch_layout, sizeof(ch_layout), 0, av_get_default_channel_layout(2));
+    av_opt_set    (source_filter, "channel_layout", ch_layout,                            AV_OPT_SEARCH_CHILDREN);
+    av_opt_set    (source_filter, "sample_fmt",     av_get_sample_fmt_name(INPUT_FORMAT), AV_OPT_SEARCH_CHILDREN);
+    av_opt_set_q  (source_filter, "time_base",      (AVRational){ 1, INPUT_SAMPLERATE },  AV_OPT_SEARCH_CHILDREN);
+    av_opt_set_int(source_filter, "sample_rate",    INPUT_SAMPLERATE,                     AV_OPT_SEARCH_CHILDREN);
+
     inst->audio_buffersrc_ctx = (AVFilterContext*)source_filter;
     return 0;
 }
@@ -243,6 +255,7 @@ int ffmpeg_filter_set_audio(void *handle, int sample_rate, int channels, int sam
 {
 	ffmpeg_filter_tag_t *inst = (ffmpeg_filter_tag_t*)handle;
 
+    sample_fmt = AV_SAMPLE_FMT_S16;
     inst->audio_input_frame = alloc_audio_frame(sample_rate, channels, (AVSampleFormat)sample_fmt, nb_samples);
     if( !inst->audio_input_frame )
     {

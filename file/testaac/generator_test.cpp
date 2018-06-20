@@ -196,3 +196,47 @@ int testaac8()
 
 	return 0;
 }
+
+int testaac9()
+{
+	void* handle = audio_generator_alloc(44100, 16, 2, 1024);
+
+	void* filterhandle = ffmpeg_filter_alloc();
+	void *filter1 = ffmpeg_filter_alloc_filter(filterhandle, "abuffer", "abuffer", NULL);
+	if( !filter1 )
+	{
+		printf("alloc abuffer error \n");
+		return -1;
+	}
+
+	ffmpeg_filter_set_audio_source_filter(filterhandle, filter1);
+	void *filter3 = ffmpeg_filter_alloc_filter(filterhandle, "abuffersink", "abuffersink", NULL);
+	ffmpeg_filter_set_audio_sink_filter(filterhandle, filter3);
+	ffmpeg_filter_link_filter(filter1, filter3);
+
+	ffmpeg_filter_open(filterhandle);
+	ffmpeg_filter_set_audio(filterhandle, 44100, 2, 16, 1024);
+	
+	std::fstream fs;
+	fs.open("1.pcm", std::ios::binary|std::ios::out);
+
+	while( 1 )
+	{
+		const char *frame = NULL;
+		int length = 0;
+		audio_generator_get_audio_frame(handle, &frame, &length);
+		ffmpeg_filter_set_audio_data(filterhandle, frame, length);
+		if( ffmpeg_filter_get_audio_data(filterhandle, &frame, &length) >= 0 )
+		{
+			if( length > 0 )
+			{
+				printf("frame length = %d \n", length);
+				fs.write(frame,length);				
+			}			
+		}
+
+		usleep(100 * 1000);
+	}
+
+	return 0;
+}
