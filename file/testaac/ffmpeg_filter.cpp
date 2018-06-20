@@ -23,7 +23,7 @@ extern "C" {
 
 #define STREAM_FRAME_RATE 25 /* 25 images/s */
 
-#define INPUT_SAMPLERATE     48000
+#define INPUT_SAMPLERATE     44100
 #define INPUT_FORMAT         AV_SAMPLE_FMT_S16
 
 struct ffmpeg_filter_tag_t
@@ -200,14 +200,8 @@ int ffmpeg_filter_set_audio_source_filter(void *handle, void* source_filter)
 {
     ffmpeg_filter_tag_t *inst = (ffmpeg_filter_tag_t*)handle;
 
-    char ch_layout[64] = {0};
-    av_get_channel_layout_string(ch_layout, sizeof(ch_layout), 0, av_get_default_channel_layout(2));
-    av_opt_set    (source_filter, "channel_layout", ch_layout,                            AV_OPT_SEARCH_CHILDREN);
-    av_opt_set    (source_filter, "sample_fmt",     av_get_sample_fmt_name(INPUT_FORMAT), AV_OPT_SEARCH_CHILDREN);
-    av_opt_set_q  (source_filter, "time_base",      (AVRational){ 1, INPUT_SAMPLERATE },  AV_OPT_SEARCH_CHILDREN);
-    av_opt_set_int(source_filter, "sample_rate",    INPUT_SAMPLERATE,                     AV_OPT_SEARCH_CHILDREN);
-
     inst->audio_buffersrc_ctx = (AVFilterContext*)source_filter;
+
     return 0;
 }
 

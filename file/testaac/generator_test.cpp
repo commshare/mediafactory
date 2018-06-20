@@ -1,4 +1,5 @@
 #include <fstream>
+#include <string>
 #include "audio_generator.h"
 #include "video_generator.h"
 #include "ffmpeg_enc.h"
@@ -202,7 +203,8 @@ int testaac9()
 	void* handle = audio_generator_alloc(44100, 16, 2, 1024);
 
 	void* filterhandle = ffmpeg_filter_alloc();
-	void *filter1 = ffmpeg_filter_alloc_filter(filterhandle, "abuffer", "abuffer", NULL);
+	std::string abufferoptions = "sample_fmt=s16:channels=2:sample_rate=44100:channel_layout=stereo";
+	void *filter1 = ffmpeg_filter_alloc_filter(filterhandle, "abuffer", "abuffer", abufferoptions.c_str());
 	if( !filter1 )
 	{
 		printf("alloc abuffer error \n");
@@ -225,8 +227,63 @@ int testaac9()
 		const char *frame = NULL;
 		int length = 0;
 		audio_generator_get_audio_frame(handle, &frame, &length);
+
+		printf("ffmpeg_filter_set_audio_data %d \n", length);
 		ffmpeg_filter_set_audio_data(filterhandle, frame, length);
+
+		printf("ffmpeg_filter_get_audio_data \n");
 		if( ffmpeg_filter_get_audio_data(filterhandle, &frame, &length) >= 0 )
+		{
+			if( length > 0 )
+			{
+				printf("frame length = %d \n", length);
+				fs.write(frame,length);				
+			}			
+		}
+
+		usleep(100 * 1000);
+	}
+
+	return 0;
+}
+
+int testaac10()
+{
+	void* handle = video_generator_alloc(960, 480, 1);
+
+	void* filterhandle = ffmpeg_filter_alloc();
+	std::string bufferoptions = "video_size=960x480:pix_fmt=0:time_base=25/1";
+	void *filter1 = ffmpeg_filter_alloc_filter(filterhandle, "buffer", "buffer", bufferoptions.c_str());
+	if( !filter1 )
+	{
+		printf("alloc buffer error \n");
+		return -1;
+	}
+
+	ffmpeg_filter_set_video_source_filter(filterhandle, filter1);
+	void *filter3 = ffmpeg_filter_alloc_filter(filterhandle, "buffersink", "buffersink", NULL);
+	ffmpeg_filter_set_video_sink_filter(filterhandle, filter3);
+	ffmpeg_filter_link_filter(filter1, filter3);
+
+	ffmpeg_filter_open(filterhandle);
+	ffmpeg_filter_set_video(filterhandle, 960, 480, 1);
+
+	std::fstream fs;
+	fs.open("1.yuv", std::ios::binary|std::ios::out);
+
+	while( 1 )
+	{
+		printf("loop start \n");
+		const char *frame = NULL;
+		int length = 0;
+		video_generator_get_yuv420p_frame(handle, &frame, &length);
+		printf("loop start 2\n");
+
+		printf("ffmpeg_filter_set_video_data %d \n", length);
+		ffmpeg_filter_set_video_data(filterhandle, frame, length);
+
+		printf("ffmpeg_filter_get_video_data \n");
+		if( ffmpeg_filter_get_video_data(filterhandle, &frame, &length) >= 0 )
 		{
 			if( length > 0 )
 			{
