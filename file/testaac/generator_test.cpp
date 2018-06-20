@@ -124,23 +124,69 @@ int testaac7()
 		printf("alloc testsrc error \n");
 		return -1;
 	}
-	void *filter2 = ffmpeg_filter_alloc_filter(filterhandle, "buffersink", "buffersink", NULL);
+	void *filter2 = ffmpeg_filter_alloc_filter(filterhandle, "scale", "scale", "960:540");
 	ffmpeg_filter_link_filter(filter1, filter2);
-	ffmpeg_filter_set_video_sink_filter(filterhandle, filter2);
-	ffmpeg_filter_open(filterhandle);
 
+	void *filter3 = ffmpeg_filter_alloc_filter(filterhandle, "buffersink", "buffersink", NULL);
+	ffmpeg_filter_set_video_sink_filter(filterhandle, filter3);
+	ffmpeg_filter_link_filter(filter2, filter3);
+
+	ffmpeg_filter_open(filterhandle);
+	ffmpeg_filter_set_video(filterhandle, 320, 240, 1);
+	
 	std::fstream fs;
-	fs.open("1.h264", std::ios::binary|std::ios::out);
+	fs.open("1.yuv", std::ios::binary|std::ios::out);
 
 	while( 1 )
 	{
 		const char *frame = NULL;
 		int length = 0;
-		printf("ffmpeg_filter_get_video_data \n");
-		while( ffmpeg_filter_get_video_data(filterhandle, &frame, &length) >= 0 )
+//		printf("ffmpeg_filter_get_video_data \n");
+		if( ffmpeg_filter_get_video_data(filterhandle, &frame, &length) >= 0 )
 		{
 			if( length > 0 )
 			{
+				printf("frame length = %d \n", length);
+				fs.write(frame,length);				
+			}			
+		}
+
+		usleep(100 * 1000);
+	}
+
+	return 0;
+}
+
+int testaac8()
+{
+	void* filterhandle = ffmpeg_filter_alloc();
+	void *filter1 = ffmpeg_filter_alloc_filter(filterhandle, "anoisesrc", "anoisesrc", NULL);
+	if( !filter1 )
+	{
+		printf("alloc anoisesrc error \n");
+		return -1;
+	}
+
+	void *filter3 = ffmpeg_filter_alloc_filter(filterhandle, "abuffersink", "abuffersink", NULL);
+	ffmpeg_filter_set_audio_sink_filter(filterhandle, filter3);
+	ffmpeg_filter_link_filter(filter1, filter3);
+
+	ffmpeg_filter_open(filterhandle);
+	ffmpeg_filter_set_audio(filterhandle, 44100, 2, 1, 1024);
+	
+	std::fstream fs;
+	fs.open("1.pcm", std::ios::binary|std::ios::out);
+
+	while( 1 )
+	{
+		const char *frame = NULL;
+		int length = 0;
+//		printf("ffmpeg_filter_get_video_data \n");
+		if( ffmpeg_filter_get_audio_data(filterhandle, &frame, &length) >= 0 )
+		{
+			if( length > 0 )
+			{
+				printf("frame length = %d \n", length);
 				fs.write(frame,length);				
 			}			
 		}

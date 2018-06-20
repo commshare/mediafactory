@@ -180,6 +180,9 @@ int ffmpeg_filter_set_video_source_filter(void *handle, void* source_filter)
 int ffmpeg_filter_set_video_sink_filter(void *handle, void* sink_filter)
 {
     ffmpeg_filter_tag_t *inst = (ffmpeg_filter_tag_t*)handle;
+
+//    enum AVPixelFormat pix_fmts[] = { AV_PIX_FMT_RGB24, AV_PIX_FMT_NONE };
+
     enum AVPixelFormat pix_fmts[] = { AV_PIX_FMT_YUV420P, AV_PIX_FMT_NONE };
     av_opt_set_int_list((AVFilterContext*)sink_filter, "pix_fmts", pix_fmts,
                       AV_PIX_FMT_NONE, AV_OPT_SEARCH_CHILDREN);
@@ -217,6 +220,9 @@ int ffmpeg_filter_set_video(void *handle, int width, int height, int pixel_forma
 {      
 	ffmpeg_filter_tag_t *inst = (ffmpeg_filter_tag_t*)handle;
 
+    printf("AV_PIX_FMT_YUV420P=%d AV_PIX_FMT_RGB24=%d \n", 
+        AV_PIX_FMT_YUV420P, AV_PIX_FMT_RGB24);
+    pixel_format = AV_PIX_FMT_YUV420P;
     inst->video_input_frame = alloc_picture(width, height, (AVPixelFormat)pixel_format);
     if( !inst->video_input_frame )
     {
@@ -308,19 +314,26 @@ int ffmpeg_filter_get_video_data(void *handle, const char** data, int *length)
 {
 	ffmpeg_filter_tag_t *inst = (ffmpeg_filter_tag_t*)handle;
 
-    printf("av_buffersink_get_frame 1 \n");
     int err = av_buffersink_get_frame(inst->video_buffersink_ctx, inst->video_output_frame);
-    printf("av_buffersink_get_frame 2 \n");
     if( err < 0 )
         return -1;
 
+
+    printf("ffmpeg_filter_get_video_data %d %d %d \n", 
+            inst->video_output_frame->linesize[0],
+            inst->video_output_frame->linesize[1],
+            inst->video_output_frame->linesize[2]);
+
+
     inst->videoframe.clear();
+    int width = inst->video_output_frame->width;
+    int height = inst->video_output_frame->height;
     inst->videoframe.append((const char*)inst->video_output_frame->data[0], 
-        inst->video_output_frame->linesize[0]);
+        width * height);
     inst->videoframe.append((const char*)inst->video_output_frame->data[1], 
-        inst->video_output_frame->linesize[1]);
+        width * height / 4);
     inst->videoframe.append((const char*)inst->video_output_frame->data[2], 
-        inst->video_output_frame->linesize[2]);
+        width * height / 4);
 
     av_frame_unref(inst->video_output_frame);
 
