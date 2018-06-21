@@ -249,10 +249,10 @@ int testaac9()
 
 int testaac10()
 {
-	void* handle = video_generator_alloc(960, 480, 1);
+	void* handle = video_generator_alloc(960, 540, 1);
 
 	void* filterhandle = ffmpeg_filter_alloc();
-	std::string bufferoptions = "video_size=960x480:pix_fmt=0:time_base=25/1";
+	std::string bufferoptions = "video_size=960x540:pix_fmt=0:time_base=25/1";
 	void *filter1 = ffmpeg_filter_alloc_filter(filterhandle, "buffer", "buffer", bufferoptions.c_str());
 	if( !filter1 )
 	{
@@ -266,23 +266,19 @@ int testaac10()
 	ffmpeg_filter_link_filter(filter1, filter3);
 
 	ffmpeg_filter_open(filterhandle);
-	ffmpeg_filter_set_video(filterhandle, 960, 480, 1);
+	ffmpeg_filter_set_video(filterhandle, 960, 540, 1);
 
 	std::fstream fs;
 	fs.open("1.yuv", std::ios::binary|std::ios::out);
 
 	while( 1 )
 	{
-		printf("loop start \n");
 		const char *frame = NULL;
 		int length = 0;
 		video_generator_get_yuv420p_frame(handle, &frame, &length);
-		printf("loop start 2\n");
 
-		printf("ffmpeg_filter_set_video_data %d \n", length);
 		ffmpeg_filter_set_video_data(filterhandle, frame, length);
 
-		printf("ffmpeg_filter_get_video_data \n");
 		if( ffmpeg_filter_get_video_data(filterhandle, &frame, &length) >= 0 )
 		{
 			if( length > 0 )
