@@ -141,7 +141,7 @@ void* mediaproc(void *arg)
 
             if( ret < 0 )
             {
-              printf("st_write error\n");
+              printf("udp_client_write error\n");
               break;
             }
             rtp_buffer += rtp_packet_length;
@@ -149,9 +149,9 @@ void* mediaproc(void *arg)
 
         usleep(1000 * 40);
     }
-  udp_client_free(udphandle);
-
-  return NULL;
+  
+    udp_client_free(udphandle);
+    return NULL;
 }
 
 void *handle_request(void *arg) {

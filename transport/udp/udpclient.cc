@@ -70,7 +70,7 @@ int udp_client_write(void* handle, const char * sendBuff, int length)
     tcpclient_t * client = (tcpclient_t*)handle;
 
     int sendSize=send(client->sockfd,sendBuff, length,0);
-    if(  sendSize <= 0)
+    if(  sendSize < 0)
     {  
         herror("Send msg error!");  
         return -1;  
@@ -87,7 +87,7 @@ int udp_client_read(void* handle, char* buffer, int length)
     tcpclient_t * client = (tcpclient_t*)handle;
 
     int recLenth=recv(client->sockfd, buffer, length,0);
-    if( recLenth <= 0 )  
+    if( recLenth < 0 )  
     {  
         return -1;
     }  
@@ -105,4 +105,4 @@ int udp_client_free(void* handle)
     delete client;
 
     return 0;  
-}  
+}
