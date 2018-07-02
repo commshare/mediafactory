@@ -49,7 +49,7 @@ void* udp_client_new(const char * server,int serverPort)
     }  
     if(connect(sockfd,(struct sockaddr*)&addr, sizeof(addr))<0)  
     {  
-        perror("Connect server fail!");  
+        perror("Connect server error");  
         return NULL; //0表示成功，-1表示失败  
     }  
 
@@ -74,7 +74,7 @@ int udp_client_write(void* handle, const char * sendBuff, int length)
     if(  sendSize < 0)
     {  
 //        printf("udp_client_write error:%d \n", errno);
-        perror("udp_client_write error\n");
+        perror("udp_client_write error");
         return -1;
     } else 
         return sendSize;  
@@ -91,7 +91,7 @@ int udp_client_read(void* handle, char* buffer, int length)
     int recLenth=recv(client->sockfd, buffer, length,0);
     if( recLenth < 0 )  
     {  
-        perror("udp_client_read error\n");
+        perror("udp_client_read error");
         return -1;
     }  
 
