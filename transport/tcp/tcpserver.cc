@@ -76,7 +76,7 @@ int tcp_server_eventloop(void* handle)
     //设置与要处理的事件相关的文件描述符
     ev.data.fd=listenfd;
     //设置要处理的事件类型
-    ev.events=EPOLLIN|EPOLLET;
+    ev.events=EPOLLIN|EPOLLOUT|EPOLLET;
 //    ev.events=EPOLLIN;
 
     //注册epoll事件
@@ -105,7 +105,7 @@ int tcp_server_eventloop(void* handle)
                 socklen_t clilen;
                 int connfd = accept(listenfd,(sockaddr *)&clientaddr, &clilen);
                 if(connfd<0){
-                    perror("connfd<0 \n");
+                    perror("accept connfd<0 \n");
                     return -1;
                 }
                 setnonblocking(connfd);
@@ -113,7 +113,7 @@ int tcp_server_eventloop(void* handle)
                     inst->connectcallback(inst, connfd, inst->userdata);
 
                 char *str = inet_ntoa(clientaddr.sin_addr);
-                std::cout << "accapt a connection from " << str << std::endl;
+//                std::cout << "accapt a connection from " << str << std::endl;
                 tcpclientdesc_t *client = new tcpclientdesc_t;
                 client->sockfd = connfd;
                 client->ip = str;
@@ -122,7 +122,7 @@ int tcp_server_eventloop(void* handle)
                 //设置用于读操作的文件描述符
                 ev.data.fd=connfd;
                 //设置用于注测的读操作事件
-                ev.events=EPOLLIN|EPOLLET;
+                ev.events=EPOLLIN|EPOLLOUT|EPOLLET;
 //                ev.events=EPOLLIN;
 
                 //注册ev
@@ -130,7 +130,7 @@ int tcp_server_eventloop(void* handle)
             }
             else if(events[i].events&EPOLLIN)//如果是已经连接的用户，并且收到数据，那么进行读入。
             {
-                std::cout<<"read"<<std::endl;
+//                std::cout<<"read"<<std::endl;
                 int sockfd = events[i].data.fd;
                 if ( sockfd < 0)
                     continue;
@@ -162,7 +162,7 @@ int tcp_server_eventloop(void* handle)
                         break;
                     }
                     buffer[n] = '\0';
-                    std::cout<<buffer<<n<<std::endl;
+//                    std::cout<<buffer<<n<<std::endl;
 
                     iter->second->recvmutex.lock();
                     iter->second->recvbuffer.append(buffer, n);
@@ -172,7 +172,7 @@ int tcp_server_eventloop(void* handle)
                 //设置用于写操作的文件描述符
                 ev.data.fd=sockfd;
                 //设置用于注测的写操作事件
-                ev.events=EPOLLOUT|EPOLLET;
+                ev.events=EPOLLIN|EPOLLOUT|EPOLLET;
 //                ev.events=EPOLLOUT;
 
                 //修改sockfd上要处理的事件为EPOLLOUT
@@ -180,7 +180,7 @@ int tcp_server_eventloop(void* handle)
             }
             else if(events[i].events&EPOLLOUT) // 如果有数据发送
             {
-                std::cout<<"write"<<std::endl;
+//                std::cout<<"write"<<std::endl;
                 int sockfd = events[i].data.fd;
                 TCPCLIENTMAP::iterator iter = inst->clients.find(sockfd);
                 if( iter == inst->clients.end() )
@@ -190,7 +190,10 @@ int tcp_server_eventloop(void* handle)
                 if( iter->second->sendbuffer.size() > 0 )
                 {
                     if( iter->second->sendbuffer.size() <= 1024 * 5 )
+                    {
                         write(sockfd, iter->second->sendbuffer.data(), iter->second->sendbuffer.size());                    
+                        iter->second->sendbuffer.clear();
+                    }
                     else
                     {
                         write(sockfd, iter->second->sendbuffer.data(), 1024*5);                        
@@ -202,7 +205,7 @@ int tcp_server_eventloop(void* handle)
                 //设置用于读操作的文件描述符
                 ev.data.fd=sockfd;
                 //设置用于注测的读操作事件
-                ev.events=EPOLLIN|EPOLLET;
+                ev.events=EPOLLIN|EPOLLOUT|EPOLLET;
 //                ev.events=EPOLLIN;
 
                 //修改sockfd上要处理的事件为EPOLIN

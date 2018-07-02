@@ -7,7 +7,7 @@ OBJS = ../../protocol/librtp/rtph264.o \
 		rtspserver.o \
 		service.o
 
-CXXFLAGS = -g -W -Wall -O2 -g -std=c++11 -Ithirdparty/lib/libst
+CXXFLAGS = -g -W -Wall -O2 -g -std=c++11 -lpthread -Ithirdparty/lib/libst
 LIBS = thirdparty/lib/libst/libst.a -lstdc++
 
 service: $(OBJS)

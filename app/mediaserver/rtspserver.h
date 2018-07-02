@@ -24,4 +24,4 @@
 
 #include "st.h"
 
-void *rtspserv(void *arg);
+void *rtspserv(int port);

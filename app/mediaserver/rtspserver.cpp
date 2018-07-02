@@ -34,7 +34,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
-
+#include <thread>
 #include <string>
 
 #include "../../protocol/librtsp/rtspdemux.h"
@@ -49,12 +49,15 @@ typedef struct
     std::string client_ip;
     int client_rtp_port;  
     unsigned int session_id;
-    st_netfd_t client_fd;
+    int client_fd;
     int local_rtp_sock;
     int local_rtcp_sock;
     int local_rtp_port;
     int local_rtcp_port;
+    void* handle;
 }rtsp_session_desc_t;
+
+unsigned int session_id = 100;
 
 void* mediaproc(void *arg)
 {
@@ -162,7 +165,7 @@ void* mediaproc(void *arg)
 void *handle_request(void *arg) {
 
     rtsp_session_desc_t* session = (rtsp_session_desc_t*)arg;
-    st_netfd_t cli_nfd = session->client_fd;
+    int cli_nfd = session->client_fd;
     printf("handle_request\n");
 
     struct sockaddr_in addr;
@@ -170,7 +173,7 @@ void *handle_request(void *arg) {
 
     /* 获取本端的socket地址 */
 //    nRet = getsockname(cli_nfd->osfd,(struct sockaddr*)&addr,&addr_len);
-    getpeername(st_netfd_fileno(cli_nfd),(struct sockaddr*)&addr,&addr_len);
+    getpeername(session->client_fd,(struct sockaddr*)&addr,&addr_len);
     session->client_ip = inet_ntoa(addr.sin_addr);
     printf("clientip = %s \n", session->client_ip.c_str());
 
@@ -187,12 +190,15 @@ void *handle_request(void *arg) {
 
     std::string buffer, msg;
     for(;;) {
+      sleep(1);
+
       memset(buf,0,sizeof(buf));
-      int nr = (int) st_read(cli_nfd, buf, sizeof(buf), ST_UTIME_NO_TIMEOUT);
-      if (nr <= 0)
+      int nr = tcp_server_read(session->handle, session->client_fd, buf, sizeof(buf));
+      if (nr < 0)
         break;
 
       buffer.append(buf,nr);
+//      printf("buffer\n%s\n", buffer.c_str());
 
       if( 0 != url_getmsg(buffer, msg) )
         continue;
@@ -204,86 +210,37 @@ void *handle_request(void *arg) {
       if( response != "")
       {
         printf("response\n%s\n",response.c_str());
-        int nw = st_write(cli_nfd, response.c_str(), response.size(), ST_UTIME_NO_TIMEOUT);
-        if (nw <= 0)
+        int nw = tcp_server_write(session->handle, session->client_fd, (char*)response.c_str(), response.size());
+        if (nw < 0)
           break;
       }
 
       if( canSend )
       {
         printf("canSend\n");
+
         session->client_rtp_port = rtsp_demux_get_client_rtp_port(rtspdemuxhandle);
-        if (st_thread_create(mediaproc, session, 0, 0) == NULL) {
-          printf("st_thread_create error");
-          return NULL;
-        }
+        std::thread t(mediaproc, (void*)session);
+        t.detach();
       }
     }
 
-  st_netfd_close(cli_nfd);
-}
-
-void *rtspserv(void *arg) {
-
-  int port = *(int*)arg;
-  /* Create and bind listening socket */
-  int sock;
-  if ((sock = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
-    printf("socket error");
-    return NULL;
-  }
-  int n = 1;
-  if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *)&n, sizeof(n)) < 0) {
-    printf("setsockopt error");
-    return NULL;
-  }
-  struct sockaddr_in lcl_addr;
-  bzero(&lcl_addr,sizeof(lcl_addr));
-  lcl_addr.sin_family = AF_INET;
-  lcl_addr.sin_addr.s_addr = htons(INADDR_ANY);
-  lcl_addr.sin_port = htons(port);
-  if (bind(sock, (struct sockaddr *)&lcl_addr, sizeof(lcl_addr)) < 0) {
-    printf("bind error");
-    return NULL;
-  }
-  listen(sock, 128);
-  st_netfd_t srv_nfd;
-  if ((srv_nfd = st_netfd_open_socket(sock)) == NULL) {
-    printf("st_netfd_open error");
-    return NULL;
-  }
-
-  unsigned int session_id = 100;
-  st_netfd_t cli_nfd;
-  struct sockaddr_in cli_addr;
-  for ( ; ; ) {
-    n = sizeof(cli_addr);
-    cli_nfd = st_accept(srv_nfd, (struct sockaddr *)&cli_addr, &n,
-     ST_UTIME_NO_TIMEOUT);
-    if (cli_nfd == NULL) {
-      printf("st_accept error");
-      return NULL;
-    }
-
-    rtsp_session_desc_t* session = new rtsp_session_desc_t;
-    session->session_id = session_id++;
-    session->client_fd = cli_nfd;
-    if (st_thread_create(handle_request, session, 0, 0) == NULL) {
-      printf("st_thread_create error");
-      return NULL;
-    }
-  }
-
-  return 0;
+  close(cli_nfd);
 }
 
 //////////////////////////////////////////////////////////
-int sockfd = -1;
 int myon_connect_callback(void* handle, int sockfd, void* userdata)
 {
   printf("myon_connect_callback %d \n", sockfd);
-  sockfd = sockfd;
-  
+
+  rtsp_session_desc_t* session = new rtsp_session_desc_t;
+  session->session_id = session_id++;
+  session->client_fd = sockfd;
+  session->handle = handle;
+
+  std::thread t(handle_request, (void*)session);
+  t.detach();
+
   return 0;
 }
 
@@ -300,19 +257,7 @@ void *rtspserv(int port)
 
 //int tcp_server_write(void* handle, int sockfd, const char* data, int length);
 
-  char buffer[1024] = {0};  
-  while( 1 )
-  {
-    memset(buffer, 0, sizeof(buffer));
-    int ret = tcp_server_read(handle, sockfd, buffer, sizeof(buffer));
-
-    if( ret > 0 )
-      printf("%s %d\n", buffer, ret);
-
-    sleep( 1 );
-  }
-
-  tcp_server_free(handle);
+//  tcp_server_free(handle);
 
   return 0;
 }

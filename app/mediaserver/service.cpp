@@ -41,17 +41,11 @@
 
 int main()
 {
-  if( st_init() < 0)
-  {
-    printf("st_init error\n");
-    return -1;
-  }
 
-  int port = 554;
-  st_thread_create(rtspserv, &port,0,0);
+  rtspserv(554);
 
   for(;;)
   {
-    st_usleep(1000);
+    sleep(1);
   }
 }
