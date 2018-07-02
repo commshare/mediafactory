@@ -9,6 +9,7 @@
 #include   <netinet/in.h>  
 #include   <arpa/inet.h>  
 #include  <string.h>
+#include    <errno.h>
 
 #include "udpclient.h"
 
@@ -72,9 +73,10 @@ int udp_client_write(void* handle, const char * sendBuff, int length)
     int sendSize=send(client->sockfd,sendBuff, length,0);
     if(  sendSize < 0)
     {  
-        herror("Send msg error!");  
-        return -1;  
-    }else  
+//        printf("udp_client_write error:%d \n", errno);
+        perror("udp_client_write error\n");
+        return -1;
+    } else 
         return sendSize;  
 }  
 
@@ -89,6 +91,7 @@ int udp_client_read(void* handle, char* buffer, int length)
     int recLenth=recv(client->sockfd, buffer, length,0);
     if( recLenth < 0 )  
     {  
+        perror("udp_client_read error\n");
         return -1;
     }  
 
