@@ -43,6 +43,7 @@
 #include "rtspserver.h"
 
 #include "../../transport/tcp/tcpserver.h"
+#include "../../transport/udp/udpclient.h"
 
 typedef struct 
 {
@@ -65,23 +66,13 @@ void* mediaproc(void *arg)
     int clientport = session->client_rtp_port;
     printf(" clientport = %d \n", clientport);
 
-    st_netfd_t srv_nfd;
-    if ((srv_nfd = st_netfd_open_socket(session->local_rtp_sock)) == NULL) {
-      printf("st_netfd_open error");
+    void* udphandle = udp_client_new(session->client_ip.c_str(), clientport);
+    if( !udphandle )
+    {
+      printf("udp_client_new error \n");
       return NULL;
     }
-
-    struct sockaddr_in server;  
-    int addrlen =sizeof(server);  
-    server.sin_family=AF_INET;  
-    server.sin_port=htons(clientport);            
-    server.sin_addr.s_addr = inet_addr(session->client_ip.c_str());  
-    if( 0 > st_connect(srv_nfd, (const sockaddr *)&server, addrlen, ST_UTIME_NO_TIMEOUT) )
-    {
-      printf("st_connect error");
-      return NULL;      
-    }
-
+    
     ////////////////////////////////////////////////
     void* rtphandle = rtp_mux_init(1);
     void* h264handle = H264Demux_Init((char*)"./test.264", 1);
@@ -111,6 +102,7 @@ void* mediaproc(void *arg)
 
     while( 1 )
     {
+        printf("ReadOneNaluFromBuf error\n");
         int ret = H264Demux_GetFrame(h264handle, &h264frame, &framelength);
         if( ret < 0 )
         {
@@ -140,11 +132,11 @@ void* mediaproc(void *arg)
         {
             if( i == rtp_packet_count - 1)
             {
-                ret = st_write(srv_nfd, rtp_buffer, last_rtp_packet_length, ST_UTIME_NO_TIMEOUT);
+                ret = udp_client_write(udphandle, rtp_buffer, last_rtp_packet_length);
             }
             else
             {
-                ret = st_write(srv_nfd, rtp_buffer, rtp_packet_length, ST_UTIME_NO_TIMEOUT);
+                ret = udp_client_write(udphandle, rtp_buffer, rtp_packet_length);
             }
 
             if( ret < 0 )
@@ -157,7 +149,7 @@ void* mediaproc(void *arg)
 
         st_usleep(1000 * 40);
     }
-  st_netfd_close(srv_nfd);
+  udp_client_free(udphandle);
 
   return NULL;
 }

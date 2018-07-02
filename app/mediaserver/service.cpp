@@ -41,7 +41,6 @@
 
 int main()
 {
-
   rtspserv(554);
 
   for(;;)

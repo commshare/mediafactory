@@ -4,6 +4,7 @@ OBJS = ../../protocol/librtp/rtph264.o \
 		../../file/libh26x/h264demux.o \
 		../../file/libh26x/spspps.o \
 		../../transport/tcp/tcpserver.o \
+		../../transport/udp/udpclient.o \
 		rtspserver.o \
 		service.o
 
