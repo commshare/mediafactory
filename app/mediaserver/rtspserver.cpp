@@ -294,9 +294,8 @@ int myon_close_callback(void* handle, int sockfd, void* userdata)
   return 0;
 }
 
-void *test(void *arg)
+void *rtspserv(int port)
 {
-  int port = *(int*)arg;
   void* handle = tcp_server_new("0.0.0.0", port, myon_connect_callback, myon_close_callback, NULL);
 
 //int tcp_server_write(void* handle, int sockfd, const char* data, int length);
