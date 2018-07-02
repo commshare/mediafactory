@@ -72,7 +72,7 @@ void* mediaproc(void *arg)
       printf("udp_client_new error \n");
       return NULL;
     }
-    
+
     ////////////////////////////////////////////////
     void* rtphandle = rtp_mux_init(1);
     void* h264handle = H264Demux_Init((char*)"./test.264", 1);
@@ -102,13 +102,13 @@ void* mediaproc(void *arg)
 
     while( 1 )
     {
-        printf("ReadOneNaluFromBuf error\n");
         int ret = H264Demux_GetFrame(h264handle, &h264frame, &framelength);
         if( ret < 0 )
         {
           printf("ReadOneNaluFromBuf error\n");
           break;
         }
+
         int frametype = h264frame[4]&0x1f;
         if( frametype == 5 )
         {
@@ -147,7 +147,7 @@ void* mediaproc(void *arg)
             rtp_buffer += rtp_packet_length;
         }
 
-        st_usleep(1000 * 40);
+        usleep(1000 * 40);
     }
   udp_client_free(udphandle);
 
