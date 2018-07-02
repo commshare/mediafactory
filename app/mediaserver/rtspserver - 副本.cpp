@@ -42,8 +42,6 @@
 #include "../../file/libh26x/h264demux.h"
 #include "rtspserver.h"
 
-#include "../../transport/tcp/tcpserver.h"
-
 typedef struct 
 {
     std::string client_ip;
@@ -55,6 +53,17 @@ typedef struct
     int local_rtp_port;
     int local_rtcp_port;
 }rtsp_session_desc_t;
+
+int url_getmsg(std::string &buffer, std::string &msg)
+{
+    int pos = buffer.find("\r\n\r\n");
+    if( pos < 0 )
+        return -1;
+
+    msg = buffer.substr(0,pos+4);
+    buffer.erase(0,pos+4);
+    return 0;
+}
 
 void* mediaproc(void *arg)
 {
@@ -273,47 +282,6 @@ void *rtspserv(void *arg) {
       return NULL;
     }
   }
-
-  return 0;
-}
-
-//////////////////////////////////////////////////////////
-int sockfd = -1;
-int myon_connect_callback(void* handle, int sockfd, void* userdata)
-{
-  printf("myon_connect_callback %d \n", sockfd);
-  sockfd = sockfd;
-  
-  return 0;
-}
-
-int myon_close_callback(void* handle, int sockfd, void* userdata)
-{
-  printf("myon_close_callback %d \n", sockfd);
-
-  return 0;
-}
-
-void *test(void *arg)
-{
-  int port = *(int*)arg;
-  void* handle = tcp_server_new("0.0.0.0", port, myon_connect_callback, myon_close_callback, NULL);
-
-//int tcp_server_write(void* handle, int sockfd, const char* data, int length);
-
-  char buffer[1024] = {0};  
-  while( 1 )
-  {
-    memset(buffer, 0, sizeof(buffer));
-    int ret = tcp_server_read(handle, sockfd, buffer, sizeof(buffer));
-
-    if( ret > 0 )
-      printf("%s %d\n", buffer, ret);
-
-    sleep( 1 );
-  }
-
-  tcp_server_free(handle);
 
   return 0;
 }

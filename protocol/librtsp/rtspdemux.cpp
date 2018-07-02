@@ -15,6 +15,17 @@ typedef struct
 
 }rtsp_demux_desc_t;
 
+int url_getmsg(std::string &buffer, std::string &msg)
+{
+    int pos = buffer.find("\r\n\r\n");
+    if( pos < 0 )
+        return -1;
+
+    msg = buffer.substr(0,pos+4);
+    buffer.erase(0,pos+4);
+    return 0;
+}
+/////////////////////////////////////////////
 std::string getResponse_OPTIONS(const char *server, std::string &seq)
 {
     std::string strResponse = "RTSP/1.0 200 OK \r\n" \
