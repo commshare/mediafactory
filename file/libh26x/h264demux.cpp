@@ -83,6 +83,7 @@ int H264ReadOneFrameFromBuf(void* handle)
     desc->frame.clear();
     char prefix[] = {0,0,0,1};
     desc->frame.append(prefix, 4);
+
     desc->frame.append(desc->databuffer.data()+startpos, framelength);
 
     desc->databuffer.erase(0, startpos+framelength);
@@ -219,7 +220,8 @@ int H264Demux_GetConfig(void *handle, H264Configuration_t *config)
             return -1;
         }
 
-        printf("H264Demux_GetConfig %d %d \n", desc->sps.size(), desc->pps.size());
+        printf("H264Demux_GetConfig spslen=%d ppslen=%d framelength=%d \n", 
+                desc->sps.size(), desc->pps.size(), framelength);
         desc->probeframes.push_back(std::string(frame, framelength));        
     }
 

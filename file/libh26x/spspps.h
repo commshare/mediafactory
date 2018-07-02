@@ -8,6 +8,7 @@ Modification:
 #ifndef _sps_pps_H_
 #define _sps_pps_H_
 
+#include <stdint.h>
 /***
  * Sequence parameter set 
  * ¿É²Î¿ŒH264±ê×ŒµÚ7œÚºÍžœÂŒD E
