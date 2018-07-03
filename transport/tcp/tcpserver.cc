@@ -191,12 +191,13 @@ int tcp_server_eventloop(void* handle)
                 {
                     if( iter->second->sendbuffer.size() <= 1024 * 5 )
                     {
-                        write(sockfd, iter->second->sendbuffer.data(), iter->second->sendbuffer.size());                    
+                        int writelen = write(sockfd, iter->second->sendbuffer.data(), iter->second->sendbuffer.size());                    
+
                         iter->second->sendbuffer.clear();
                     }
                     else
                     {
-                        write(sockfd, iter->second->sendbuffer.data(), 1024*5);                        
+                        int writelen = write(sockfd, iter->second->sendbuffer.data(), 1024*5);                        
                         iter->second->sendbuffer.erase(0, 1024 * 5);
                     }
                 }
@@ -273,10 +274,14 @@ int tcp_server_write(void* handle, int clientid, const char* data, int length)
     if( iter == inst->clients.end() )
         return -1;
 
+    int writelen = write(clientid, data, length);
+    printf("writelen=%d, length=%d \n", writelen, length);
+    
+/*
     iter->second->sendmutex.lock();
     iter->second->sendbuffer.append(data, length);
     iter->second->sendmutex.unlock();
-
+*/
     return 0;
 }
 

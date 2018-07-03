@@ -18,7 +18,7 @@ typedef struct
     int packet_length;
     int last_packet_length;
     int packet_count;
-    unsigned long sequence_number;
+    uint16_t sequence_number;
     unsigned int timestamp_increse;
     unsigned int timestamp_current;
     unsigned long rtp_ssrc;
