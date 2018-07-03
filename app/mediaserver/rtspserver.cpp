@@ -113,6 +113,7 @@ void* tcpmediaproc(void *arg)
         }
 
         int frametype = h264frame[4]&0x1f;
+/*
         if( frametype == 5 )
         {
             H264Demux_GetConfig(h264handle, &config);
@@ -122,6 +123,7 @@ void* tcpmediaproc(void *arg)
             temp_frame.append(h264frame, framelength);
         }
         else
+*/
         {
             temp_frame.clear();
             temp_frame.append(h264frame+4, framelength-4);
