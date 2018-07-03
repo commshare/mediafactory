@@ -62,7 +62,7 @@ typedef struct
 typedef struct
 { 
     uint8_t magic : 8;// $ 0x24
-    uint8_t channel : 8; //0-1 0-rtp,1-rtcp
+    uint8_t channel : 8; //0-1 0-video rtp,1-video rtcp,2-audio rtp,3-audio rtcp
     uint16_t rtp_len : 16;
 }rtsp_interleaved;
 #pragma pack(pop)
@@ -78,7 +78,7 @@ void* tcpmediaproc(void *arg)
 
     ////////////////////////////////////////////////
     void* rtphandle = rtp_mux_init(1);
-    void* h264handle = H264Demux_Init((char*)"./test.264", 1);
+    void* h264handle = H264Demux_Init((char*)"./111.264", 1);
     if( !h264handle )
     {
       printf("H264Framer_Init error\n");
@@ -295,8 +295,8 @@ void *handle_request(void *arg) {
         continue;
 
       printf("msg\n%s\n", msg.c_str());
-      int canSend = 0;
-      std::string response = rtsp_demux_parse(rtspdemuxhandle, msg.c_str(), canSend);
+      int canSend = 0, transport_proto = -1;
+      std::string response = rtsp_demux_parse(rtspdemuxhandle, msg.c_str(), transport_proto, canSend);
 //      std::string response = rtsp_parse(buf,canSend);
       if( response != "")
       {
@@ -311,9 +311,16 @@ void *handle_request(void *arg) {
         printf("canSend\n");
 
         session->client_rtp_port = rtsp_demux_get_client_rtp_port(rtspdemuxhandle);
-//        std::thread t(udpmediaproc, (void*)session);
-        std::thread t(tcpmediaproc, (void*)session);
-        t.detach();
+        if( transport_proto == 0 )//udp
+        {
+            std::thread t(udpmediaproc, (void*)session);
+            t.detach();
+        }
+        else if( transport_proto == 1 )//tcp
+        {
+            std::thread t(tcpmediaproc, (void*)session);
+            t.detach();
+        }
       }
     }
 

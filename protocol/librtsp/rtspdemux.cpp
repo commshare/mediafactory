@@ -12,7 +12,7 @@ typedef struct
     int client_rtp_port;
     int server_rtp_port;
     std::string client_session_id;
-
+    int transport_protocol;//0-udp,1-tcp,2-http
 }rtsp_demux_desc_t;
 
 int url_getmsg(std::string &buffer, std::string &msg)
@@ -159,7 +159,7 @@ void* rtsp_demux_init(const char* sessionid, int local_rtp_port)
     return (void*)handle;
 }
 
-std::string rtsp_demux_parse(void* handle, const char* request, int &canSend)
+std::string rtsp_demux_parse(void* handle, const char* request, int &transport_proto, int &canSend)
 {
     rtsp_demux_desc_t* rtsp_demux = (rtsp_demux_desc_t*)handle;
 
@@ -189,10 +189,12 @@ std::string rtsp_demux_parse(void* handle, const char* request, int &canSend)
 
         if(  pos > 0 )
         {
+            rtsp_demux->transport_protocol = 1;
             strResponse = getResponse_SETUP_TCP(rtsp_demux->client_session_id.c_str(), strCSeq);            
         }
         else
         {
+            rtsp_demux->transport_protocol = 0;
             pos = strRequest.find("client_port=");
             pos1 = strRequest.find(pos);
             std::string strTemp = strRequest.substr(pos+strlen("client_port="),pos1-pos);
@@ -204,6 +206,7 @@ std::string rtsp_demux_parse(void* handle, const char* request, int &canSend)
     {
         strResponse = getResponse_PLAY(rtsp_demux->client_session_id.c_str(), strCSeq);        
         canSend = 1;
+        transport_proto = rtsp_demux->transport_protocol;
     }
     else if( head == "PAUSE" )
     {
