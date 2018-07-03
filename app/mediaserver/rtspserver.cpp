@@ -78,7 +78,7 @@ void* tcpmediaproc(void *arg)
 
     ////////////////////////////////////////////////
     void* rtphandle = rtp_mux_init(1);
-    void* h264handle = H264Demux_Init((char*)"./111.264", 1);
+    void* h264handle = H264Demux_Init((char*)"./test.264", 1);
     if( !h264handle )
     {
       printf("H264Framer_Init error\n");

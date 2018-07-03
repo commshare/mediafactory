@@ -133,6 +133,7 @@ int rtp_set_h264_frame_over_udp(void* handle, const char* frame_buffer, int fram
         rtp_mux->timestamp_current += rtp_mux->timestamp_increse;  
 
         rtp_mux->rtp_buffer.append((char*)&rtp_hdr, sizeof(rtp_hdr));
+        //NAL单元的第一字节和RTP荷载头第一个字节重合
         rtp_mux->rtp_buffer.append(frame_buffer, frame_length);
 
         rtp_mux->packet_count = 1;
