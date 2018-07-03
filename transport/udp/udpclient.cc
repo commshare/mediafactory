@@ -22,7 +22,7 @@ struct tcpclient_t {
  * 连接SOCKET服务器，如果出错返回-1，否则返回socket处理代码 
  * server：服务器地址(域名或者IP),serverport：端口 
  * ********************************************************/  
-void* udp_client_new(const char * server,int serverPort)
+void* udp_client_new(const char * server,int serverPort, int localport, int localfd)
 {  
     int    sockfd=0;  
     struct    sockaddr_in    addr;  
@@ -30,10 +30,31 @@ void* udp_client_new(const char * server,int serverPort)
     //向系统注册，通知系统建立一个通信端口  
     //AF_INET表示使用IPv4协议  
     //SOCK_STREAM表示使用TCP协议  
-    if((sockfd=socket(AF_INET,SOCK_DGRAM,0))<0){  
-        herror("Init socket error!");  
-        return NULL;  
-    }  
+    if( localfd >= 0 )
+        sockfd = localfd;
+    else
+    {
+        if((sockfd=socket(AF_INET,SOCK_DGRAM,0))<0){  
+            perror("Init socket error!");  
+            return NULL;  
+        }        
+    }
+
+    if( localport >= 0 )
+    {
+        struct sockaddr_in lcl_addr;
+        bzero(&lcl_addr,sizeof(lcl_addr));
+        lcl_addr.sin_family = AF_INET;
+        lcl_addr.sin_addr.s_addr = htons(INADDR_ANY);
+        lcl_addr.sin_port = htons(localport);
+        if (bind(sockfd, (struct sockaddr *)&lcl_addr, sizeof(lcl_addr)) < 0) 
+        {
+            perror("bind error");
+            close(sockfd);
+            return NULL;
+        }
+    }
+
     bzero(&addr,sizeof(addr));  
     addr.sin_family = AF_INET;  
     addr.sin_port = htons(serverPort);  
@@ -42,7 +63,7 @@ void* udp_client_new(const char * server,int serverPort)
     if(addr.sin_addr.s_addr == INADDR_NONE){//如果输入的是域名  
         phost = (struct hostent*)gethostbyname(server);  
         if(phost==NULL){  
-            herror("Init socket s_addr error!");  
+            perror("Init socket s_addr error!");  
             return NULL;  
         }  
         addr.sin_addr.s_addr =((struct in_addr*)phost->h_addr)->s_addr;  

@@ -66,7 +66,7 @@ void* mediaproc(void *arg)
     int clientport = session->client_rtp_port;
     printf(" clientport = %d \n", clientport);
 
-    void* udphandle = udp_client_new(session->client_ip.c_str(), clientport);
+    void* udphandle = udp_client_new(session->client_ip.c_str(), clientport, -1, session->local_rtp_sock);
     if( !udphandle )
     {
       printf("udp_client_new error \n");
