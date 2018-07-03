@@ -58,9 +58,109 @@ typedef struct
     void* handle;
 }rtsp_session_desc_t;
 
+#pragma pack(push, 1)
+typedef struct
+{ 
+    uint8_t magic : 8;// $ 0x24
+    uint8_t channel : 8; //0-1 0-rtp,1-rtcp
+    uint16_t rtp_len : 16;
+}rtsp_interleaved;
+#pragma pack(pop)
+
 unsigned int session_id = 100;
 
-void* mediaproc(void *arg)
+void* tcpmediaproc(void *arg)
+{
+    rtsp_session_desc_t* session = (rtsp_session_desc_t*)arg;
+    rtsp_interleaved ri;
+    ri.magic = 0x24;
+    ri.channel = 0;
+
+    ////////////////////////////////////////////////
+    void* rtphandle = rtp_mux_init(1);
+    void* h264handle = H264Demux_Init((char*)"./test.264", 1);
+    if( !h264handle )
+    {
+      printf("H264Framer_Init error\n");
+      return NULL;
+    }
+    H264Configuration_t config;
+    if( H264Demux_GetConfig(h264handle, &config) < 0 )
+    {
+      printf("H264Demux_GetConfig error\n");
+      return NULL;
+    }
+    printf("H264Demux_GetConfig:width %d height %d framerate %d timescale %d %d %d \n",
+        config.width, config.height, config.framerate, config.timescale,
+        config.spslen, config.ppslen);
+
+    const char *h264frame = NULL;
+    int framelength = -1;
+    unsigned int timestamp = 0;
+
+    std::string temp_frame;
+
+    const char* rtp_buffer = NULL;
+    int rtp_packet_length, last_rtp_packet_length, rtp_packet_count;
+
+    while( 1 )
+    {
+        int ret = H264Demux_GetFrame(h264handle, &h264frame, &framelength);
+        if( ret < 0 )
+        {
+          printf("ReadOneNaluFromBuf error\n");
+          break;
+        }
+
+        int frametype = h264frame[4]&0x1f;
+        if( frametype == 5 )
+        {
+            H264Demux_GetConfig(h264handle, &config);
+            temp_frame.clear();
+            temp_frame.append(config.sps+4, config.spslen-4);
+            temp_frame.append(config.pps, config.ppslen);
+            temp_frame.append(h264frame, framelength);
+        }
+        else
+        {
+            temp_frame.clear();
+            temp_frame.append(h264frame+4, framelength-4);
+        }
+
+//        rtp_set_h264_frame_over_udp(rtphandle, h264frame+4, framelength-4);
+        rtp_set_h264_frame_over_udp(rtphandle, temp_frame.data(), temp_frame.size());
+        rtp_get_h264_packet_over_udp(rtphandle, &rtp_buffer, &rtp_packet_length, &last_rtp_packet_length, &rtp_packet_count);
+
+        for( int i = 0;i < rtp_packet_count;i++ )
+        {
+            if( i == rtp_packet_count - 1)
+            {
+                ri.rtp_len = htons(last_rtp_packet_length);
+                ret = tcp_server_write(session->handle, session->client_fd, (const char*)&ri, sizeof(ri));
+                ret = tcp_server_write(session->handle, session->client_fd, rtp_buffer, last_rtp_packet_length);
+            }
+            else
+            {
+                ri.rtp_len = htons(rtp_packet_length);
+                ret = tcp_server_write(session->handle, session->client_fd, (const char*)&ri, sizeof(ri));
+                ret = tcp_server_write(session->handle, session->client_fd, rtp_buffer, rtp_packet_length);
+            }
+
+            if( ret < 0 )
+            {
+                printf("tcp_server_write error\n");
+                break;
+            }
+            rtp_buffer += rtp_packet_length;
+        }
+
+        usleep(1000 * 40);
+    }
+  
+    return NULL;
+}
+
+void* udpmediaproc(void *arg)
 {
     rtsp_session_desc_t* session = (rtsp_session_desc_t*)arg;
     int clientport = session->client_rtp_port;
@@ -157,7 +257,6 @@ void* mediaproc(void *arg)
 void *handle_request(void *arg) {
 
     rtsp_session_desc_t* session = (rtsp_session_desc_t*)arg;
-    int cli_nfd = session->client_fd;
     printf("handle_request\n");
 
     struct sockaddr_in addr;
@@ -212,12 +311,13 @@ void *handle_request(void *arg) {
         printf("canSend\n");
 
         session->client_rtp_port = rtsp_demux_get_client_rtp_port(rtspdemuxhandle);
-        std::thread t(mediaproc, (void*)session);
+//        std::thread t(udpmediaproc, (void*)session);
+        std::thread t(tcpmediaproc, (void*)session);
         t.detach();
       }
     }
 
-  close(cli_nfd);
+    close(session->client_fd);
 }
 
 //////////////////////////////////////////////////////////
