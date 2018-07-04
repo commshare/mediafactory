@@ -114,6 +114,10 @@ void* tcpmediaproc(void *arg)
 
         int frametype = h264frame[4]&0x1f;
 /*
+        printf("frameinfo:%u %u %u %u %u frametype:%d framelength:%d \n", 
+              h264frame[0], h264frame[1], h264frame[2], h264frame[3],h264frame[4], 
+              frametype, framelength);
+*/
         if( frametype == 5 )
         {
             H264Demux_GetConfig(h264handle, &config);
@@ -123,7 +127,7 @@ void* tcpmediaproc(void *arg)
             temp_frame.append(h264frame, framelength);
         }
         else
-*/
+
         {
             temp_frame.clear();
             temp_frame.append(h264frame+4, framelength-4);
@@ -156,7 +160,7 @@ void* tcpmediaproc(void *arg)
             rtp_buffer += rtp_packet_length;
         }
 
-        usleep(1000 * 40);
+        usleep(1000 * 40);//1000);
     }
   
     return NULL;

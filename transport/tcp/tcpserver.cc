@@ -275,7 +275,7 @@ int tcp_server_write(void* handle, int clientid, const char* data, int length)
         return -1;
 
     int writelen = write(clientid, data, length);
-    printf("writelen=%d, length=%d \n", writelen, length);
+//    printf("writelen=%d, length=%d \n", writelen, length);
     
 /*
     iter->second->sendmutex.lock();

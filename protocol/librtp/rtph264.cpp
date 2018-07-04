@@ -132,7 +132,9 @@ int rtp_set_h264_frame_over_udp(void* handle, const char* frame_buffer, int fram
         rtp_hdr.timestamp=htonl(rtp_mux->timestamp_current);  
         rtp_mux->timestamp_current += rtp_mux->timestamp_increse;  
 
-        rtp_mux->rtp_buffer.append((char*)&rtp_hdr, sizeof(rtp_hdr));
+        rtp_mux->rtp_buffer.append((char*)&rtp_hdr, 12);//sizeof(rtp_hdr));
+
+        printf("sizeof(rtp_hdr)=%d %d \n", sizeof(rtp_hdr), rtp_mux->rtp_buffer.size());
         //NAL单元的第一字节和RTP荷载头第一个字节重合
         rtp_mux->rtp_buffer.append(frame_buffer, frame_length);
 
@@ -159,7 +161,7 @@ int rtp_set_h264_frame_over_udp(void* handle, const char* frame_buffer, int fram
 
                 //设置rtp M 位；当前传输的是最后一个分片时该位置1  
                 rtp_hdr.marker = 1;  
-                rtp_mux->rtp_buffer.append((char*)&rtp_hdr, sizeof(rtp_hdr));
+                rtp_mux->rtp_buffer.append((char*)&rtp_hdr, 12);//sizeof(rtp_hdr));
         
                 //设置FU INDICATOR,并将这个HEADER填入sendbuf[12]  
                 fu_ind.F = nalu_hdr.F;  
@@ -185,7 +187,7 @@ int rtp_set_h264_frame_over_udp(void* handle, const char* frame_buffer, int fram
             {  
                 //设置rtp M 位；  
                 rtp_hdr.marker = 0;  
-                rtp_mux->rtp_buffer.append((char*)&rtp_hdr, sizeof(rtp_hdr));
+                rtp_mux->rtp_buffer.append((char*)&rtp_hdr, 12);//sizeof(rtp_hdr));
 
                 //设置FU INDICATOR,并将这个HEADER填入sendbuf[12]  
                 fu_ind.F = nalu_hdr.F;  
