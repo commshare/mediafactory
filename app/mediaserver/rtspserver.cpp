@@ -127,7 +127,6 @@ void* tcpmediaproc(void *arg)
             temp_frame.append(h264frame, framelength);
         }
         else
-
         {
             temp_frame.clear();
             temp_frame.append(h264frame+4, framelength-4);

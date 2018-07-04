@@ -16,11 +16,11 @@ typedef struct
     unsigned char payload:7;        /**//* RTP_PAYLOAD_RTSP */  
     unsigned char marker:1;        /**//* expect 1 */  
     /**//* bytes 2, 3 */  
-    unsigned short seq_no;              
+    uint16_t seq_no;              
     /**//* bytes 4-7 */  
-    unsigned  long timestamp;          
+    uint32_t timestamp;          
     /**//* bytes 8-11 */  
-    unsigned long ssrc;            /**//* stream number is used here. */  
+    uint32_t ssrc;            /**//* stream number is used here. */  
 } RTP_FIXED_HEADER;  
 #pragma pack(pop)
 

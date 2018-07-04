@@ -18,10 +18,11 @@ typedef struct
     int packet_length;
     int last_packet_length;
     int packet_count;
+
     uint16_t sequence_number;
-    unsigned int timestamp_increse;
-    unsigned int timestamp_current;
-    unsigned long rtp_ssrc;
+    uint32_t timestamp_increse;
+    uint32_t timestamp_current;
+    uint32_t rtp_ssrc;
 }rtp_h264_mux_desc_t;
 
 #pragma pack(push,1)
@@ -100,7 +101,7 @@ int get_local_rtp_rtcp_port(int *rtp_sock, int *rtp_port, int *rtcp_sock, int *r
 void* rtp_mux_init(unsigned long ssrc)
 {
     rtp_h264_mux_desc_t* handle = new rtp_h264_mux_desc_t;
-    handle->packet_length = MAX_RTP_BODY_LENGTH + 14;//1460;
+    handle->packet_length = sizeof(RTP_FIXED_HEADER) + sizeof(FU_INDICATOR) + sizeof(FU_HEADER) + MAX_RTP_BODY_LENGTH;//1460;
     handle->last_packet_length = 0;
     handle->sequence_number = 0;
     handle->timestamp_increse = 90000/25;
@@ -132,14 +133,14 @@ int rtp_set_h264_frame_over_udp(void* handle, const char* frame_buffer, int fram
         rtp_hdr.timestamp=htonl(rtp_mux->timestamp_current);  
         rtp_mux->timestamp_current += rtp_mux->timestamp_increse;  
 
-        rtp_mux->rtp_buffer.append((char*)&rtp_hdr, 12);//sizeof(rtp_hdr));
+        rtp_mux->rtp_buffer.append((char*)&rtp_hdr, sizeof(rtp_hdr));
 
         printf("sizeof(rtp_hdr)=%d %d \n", sizeof(rtp_hdr), rtp_mux->rtp_buffer.size());
         //NAL单元的第一字节和RTP荷载头第一个字节重合
         rtp_mux->rtp_buffer.append(frame_buffer, frame_length);
 
         rtp_mux->packet_count = 1;
-        rtp_mux->last_packet_length = frame_length + 12;
+        rtp_mux->last_packet_length = frame_length + sizeof(rtp_hdr);
     }
     else
     {  
@@ -161,7 +162,7 @@ int rtp_set_h264_frame_over_udp(void* handle, const char* frame_buffer, int fram
 
                 //设置rtp M 位；当前传输的是最后一个分片时该位置1  
                 rtp_hdr.marker = 1;  
-                rtp_mux->rtp_buffer.append((char*)&rtp_hdr, 12);//sizeof(rtp_hdr));
+                rtp_mux->rtp_buffer.append((char*)&rtp_hdr, sizeof(rtp_hdr));
         
                 //设置FU INDICATOR,并将这个HEADER填入sendbuf[12]  
                 fu_ind.F = nalu_hdr.F;  
@@ -180,14 +181,14 @@ int rtp_set_h264_frame_over_udp(void* handle, const char* frame_buffer, int fram
                 rtp_mux->rtp_buffer.append((char*)&fu_hdr, sizeof(fu_hdr));
 
                 rtp_mux->rtp_buffer.append(frame_buffer, frame_length);
-                rtp_mux->last_packet_length = frame_length + 14;
+                rtp_mux->last_packet_length = sizeof(rtp_hdr) + sizeof(fu_ind) + sizeof(fu_hdr) + frame_length;
             }  
             //既不是第一个分片，也不是最后一个分片的处理。  
             else if(frame_length > MAX_RTP_BODY_LENGTH)  
             {  
                 //设置rtp M 位；  
                 rtp_hdr.marker = 0;  
-                rtp_mux->rtp_buffer.append((char*)&rtp_hdr, 12);//sizeof(rtp_hdr));
+                rtp_mux->rtp_buffer.append((char*)&rtp_hdr, sizeof(rtp_hdr));
 
                 //设置FU INDICATOR,并将这个HEADER填入sendbuf[12]  
                 fu_ind.F = nalu_hdr.F;  
