@@ -151,6 +151,7 @@ int tcp_server_eventloop(void* handle)
                         
                             close(sockfd);
                             events[i].data.fd = -1;
+                            inst->clients.erase(iter);
                         }
                         break;
                     } else if (n == 0) {
@@ -159,6 +160,7 @@ int tcp_server_eventloop(void* handle)
 
                         close(sockfd);
                         events[i].data.fd = -1;
+                        inst->clients.erase(iter);
                         break;
                     }
                     buffer[n] = '\0';
@@ -279,7 +281,8 @@ int tcp_server_write(void* handle, int clientid, const char* data, int length)
 
     int writelen = write(clientid, data, length);
 //    printf("writelen=%d, length=%d \n", writelen, length);
-    
+    return writelen;
+
 /*
     iter->second->sendmutex.lock();
     iter->second->sendbuffer.append(data, length);

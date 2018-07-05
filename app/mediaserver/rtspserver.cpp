@@ -154,12 +154,15 @@ void* tcpmediaproc(void *arg)
             if( ret < 0 )
             {
                 printf("tcp_server_write error\n");
-//                break;
-                return NULL;
+                break;
             }
             rtp_buffer += rtp_packet_length;
         }
 
+        if( ret < 0 )
+        {
+            break;
+        }
         usleep(1000 * 40);//1000);
     }
 
