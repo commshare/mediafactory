@@ -111,7 +111,7 @@ void* rtp_mux_init(unsigned long ssrc)
     return (void*)handle;
 }
 
-int rtp_set_h264_frame_over_udp(void* handle, const char* frame_buffer, int frame_length)
+int rtp_set_h264_frame(void* handle, const char* frame_buffer, int frame_length)
 {
     rtp_h264_mux_desc_t* rtp_mux = (rtp_h264_mux_desc_t*)handle;
     rtp_mux->rtp_buffer.clear();
@@ -220,7 +220,7 @@ int rtp_set_h264_frame_over_udp(void* handle, const char* frame_buffer, int fram
     return 0;    
 }
 
-int rtp_get_h264_packet_over_udp(void* handle, const char **rtp_buffer, int *rtp_packet_length,
+int rtp_get_h264_packet(void* handle, const char **rtp_buffer, int *rtp_packet_length,
             int *rtp_last_packet_length, int *rtp_packet_count)
 {
     rtp_h264_mux_desc_t* rtp_mux = (rtp_h264_mux_desc_t*)handle;

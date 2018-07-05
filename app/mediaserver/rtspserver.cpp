@@ -133,8 +133,8 @@ void* tcpmediaproc(void *arg)
         }
 
 //        rtp_set_h264_frame_over_udp(rtphandle, h264frame+4, framelength-4);
-        rtp_set_h264_frame_over_udp(rtphandle, temp_frame.data(), temp_frame.size());
-        rtp_get_h264_packet_over_udp(rtphandle, &rtp_buffer, &rtp_packet_length, &last_rtp_packet_length, &rtp_packet_count);
+        rtp_set_h264_frame(rtphandle, temp_frame.data(), temp_frame.size());
+        rtp_get_h264_packet(rtphandle, &rtp_buffer, &rtp_packet_length, &last_rtp_packet_length, &rtp_packet_count);
 
         for( int i = 0;i < rtp_packet_count;i++ )
         {
