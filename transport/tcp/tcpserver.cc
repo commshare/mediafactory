@@ -23,7 +23,7 @@ struct tcpclientdesc_t {
     std::mutex sendmutex;
 
     std::string recvbuffer;
-    std::string sendbuffer;    
+    std::string sendbuffer, tempsendbuffer;    
 };
 
 typedef std::map<int, tcpclientdesc_t*> TCPCLIENTMAP;
@@ -187,21 +187,24 @@ int tcp_server_eventloop(void* handle)
                     return -1;
             
                 iter->second->sendmutex.lock();
-                while( iter->second->sendbuffer.size() > 0 )
-                {
-                    if( iter->second->sendbuffer.size() <= 1024 * 5 )
-                    {
-                        int writelen = write(sockfd, iter->second->sendbuffer.data(), iter->second->sendbuffer.size());                    
+                iter->second->tempsendbuffer.clear();
+                iter->second->tempsendbuffer.append(iter->second->sendbuffer.data(), iter->second->sendbuffer.size());
+                iter->second->sendmutex.unlock();                
 
-                        iter->second->sendbuffer.clear();
+                while( iter->second->tempsendbuffer.size() > 0 )
+                {
+                    if( iter->second->tempsendbuffer.size() <= 1024 * 5 )
+                    {
+                        int writelen = write(sockfd, iter->second->tempsendbuffer.data(), iter->second->tempsendbuffer.size());                    
+
+                        iter->second->tempsendbuffer.clear();
                     }
                     else
                     {
-                        int writelen = write(sockfd, iter->second->sendbuffer.data(), 1024*5);                        
-                        iter->second->sendbuffer.erase(0, 1024 * 5);
+                        int writelen = write(sockfd, iter->second->tempsendbuffer.data(), 1024*5);                        
+                        iter->second->tempsendbuffer.erase(0, 1024 * 5);
                     }
                 }
-                iter->second->sendmutex.unlock();
 
                 //设置用于读操作的文件描述符
                 ev.data.fd=sockfd;
