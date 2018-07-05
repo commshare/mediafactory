@@ -3,8 +3,8 @@
 static const char *statusCode10x[] = 
 {
     "Continue", // 100
-    "Conference Not Found", // 101
-    "Not Enough Bandwidth", // 102
+    "Switching Protocols", // 101
+    "Processing", // 102
 };
 
 static const char *statusCode45x[] = 
