@@ -72,6 +72,9 @@ unsigned int session_id = 100;
 void* tcpmediaproc(void *arg)
 {
     rtsp_session_desc_t* session = (rtsp_session_desc_t*)arg;
+    void* tcpserverhandle = session->handle;
+    int client_fd = session->client_fd;
+
     rtsp_interleaved ri;
     ri.magic = 0x24;
     ri.channel = 0;
@@ -141,14 +144,14 @@ void* tcpmediaproc(void *arg)
             if( i == rtp_packet_count - 1)
             {
                 ri.rtp_len = htons(last_rtp_packet_length);
-                ret = tcp_server_write(session->handle, session->client_fd, (const char*)&ri, sizeof(ri));
-                ret = tcp_server_write(session->handle, session->client_fd, rtp_buffer, last_rtp_packet_length);
+                ret = tcp_server_write(tcpserverhandle, client_fd, (const char*)&ri, sizeof(ri));
+                ret = tcp_server_write(tcpserverhandle, client_fd, rtp_buffer, last_rtp_packet_length);
             }
             else
             {
                 ri.rtp_len = htons(rtp_packet_length);
-                ret = tcp_server_write(session->handle, session->client_fd, (const char*)&ri, sizeof(ri));
-                ret = tcp_server_write(session->handle, session->client_fd, rtp_buffer, rtp_packet_length);
+                ret = tcp_server_write(tcpserverhandle, client_fd, (const char*)&ri, sizeof(ri));
+                ret = tcp_server_write(tcpserverhandle, client_fd, rtp_buffer, rtp_packet_length);
             }
 
             if( ret < 0 )
@@ -337,6 +340,7 @@ void *handle_request(void *arg) {
     }
 
     close(session->client_fd);
+    delete session;
     printf("handle_request exit \n");
 }
 
