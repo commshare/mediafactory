@@ -19,6 +19,18 @@ static const char *statusCode20x[] =
     "Multi-Status", // 207
 };
 
+static const char *statusCode30x[] = 
+{
+    "Multiple Choices", // 300
+    "Moved Permanently", // 301
+    "Move temporarily", // 302
+    "See Other", // 303
+    "Not Modified", // 304
+    "Use Proxy", // 305
+    "Switch Proxy", // 306
+    "Temporary Redirect", // 307
+};
+
 static const char *statusCode45x[] = 
 {
     "Parameter Not Understood", // 451
