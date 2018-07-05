@@ -284,24 +284,24 @@ void *handle_request(void *arg) {
 //////////////////////////////////////////////////////////
 int myon_connect_callback(void* handle, int sockfd, void* userdata)
 {
-  printf("myon_connect_callback %d \n", sockfd);
+    printf("myon_connect_callback %d \n", sockfd);
 
-  rtsp_session_desc_t* session = new rtsp_session_desc_t;
-  session->session_id = session_id++;
-  session->client_fd = sockfd;
-  session->handle = handle;
+    rtsp_session_desc_t* session = new rtsp_session_desc_t;
+    session->session_id = session_id++;
+    session->client_fd = sockfd;
+    session->handle = handle;
 
-  std::thread t(handle_request, (void*)session);
-  t.detach();
+    std::thread t(handle_request, (void*)session);
+    t.detach();
 
-  return 0;
+    return 0;
 }
 
 int myon_close_callback(void* handle, int sockfd, void* userdata)
 {
-  printf("myon_close_callback %d \n", sockfd);
+    printf("myon_close_callback %d \n", sockfd);
 
-  return 0;
+    return 0;
 }
 
 void *rtspserv(int port)
