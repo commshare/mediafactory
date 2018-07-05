@@ -187,7 +187,7 @@ int tcp_server_eventloop(void* handle)
                     return -1;
             
                 iter->second->sendmutex.lock();
-                if( iter->second->sendbuffer.size() > 0 )
+                while( iter->second->sendbuffer.size() > 0 )
                 {
                     if( iter->second->sendbuffer.size() <= 1024 * 5 )
                     {
