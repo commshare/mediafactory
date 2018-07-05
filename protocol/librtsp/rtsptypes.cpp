@@ -1,6 +1,13 @@
 #include "rtsptypes.h"
 
-static const char *statecode45x[] = 
+static const char *statusCode10x[] = 
+{
+    "Continue", // 100
+    "Conference Not Found", // 101
+    "Not Enough Bandwidth", // 102
+};
+
+static const char *statusCode45x[] = 
 {
     "Parameter Not Understood", // 451
     "Conference Not Found", // 452
@@ -20,8 +27,8 @@ int rtsp_get_error_info(int code, const char** errorinfo)
 {
 
 
-    if(451 <= code && code < 451+sizeof(statecode45x)/sizeof(statecode45x[0]))
-        *errorinfo = statecode45x[code-451];
+    if(451 <= code && code < 451+sizeof(statusCode45x)/sizeof(statusCode45x[0]))
+        *errorinfo = statusCode45x[code-451];
 
     switch(code)
     {
