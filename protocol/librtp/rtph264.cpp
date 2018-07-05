@@ -135,7 +135,7 @@ int rtp_set_h264_frame_over_udp(void* handle, const char* frame_buffer, int fram
 
         rtp_mux->rtp_buffer.append((char*)&rtp_hdr, sizeof(rtp_hdr));
 
-        printf("sizeof(rtp_hdr)=%d %d \n", sizeof(rtp_hdr), rtp_mux->rtp_buffer.size());
+//        printf("sizeof(rtp_hdr)=%d %d \n", sizeof(rtp_hdr), rtp_mux->rtp_buffer.size());
         //NAL单元的第一字节和RTP荷载头第一个字节重合
         rtp_mux->rtp_buffer.append(frame_buffer, frame_length);
 
