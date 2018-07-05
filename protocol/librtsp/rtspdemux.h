@@ -8,6 +8,8 @@ int rtsp_demux_parse(void* handle, const char* request, const char** response, i
 
 int rtsp_demux_getfileext(void* handle, const char** fileext);
 
+int rtsp_demux_getfilename(void* handle, const char** filename);
+
 int rtsp_demux_get_client_rtp_port(void* handle);
 
 int rtsp_demux_close(void* handle);

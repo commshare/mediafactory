@@ -179,6 +179,14 @@ int rtsp_demux_getfileext(void* handle, const char** fileext)
     return 0;
 }
 
+int rtsp_demux_getfilename(void* handle, const char** filename)
+{
+    rtsp_demux_desc_t* rtsp_demux = (rtsp_demux_desc_t*)handle;
+    *filename = rtsp_demux->filename.c_str();
+
+    return 0;    
+}
+
 int rtsp_demux_parse(void* handle, const char* request, const char** response, int &transport_proto, int &canSend)
 {
     rtsp_demux_desc_t* rtsp_demux = (rtsp_demux_desc_t*)handle;

@@ -6,6 +6,7 @@ OBJS = ../../protocol/librtp/rtph264.o \
 		../../transport/tcp/tcpserver.o \
 		../../transport/udp/udpclient.o \
 		rtspserver.o \
+		framer.o \
 		main.o
 
 CXXFLAGS = -g -W -Wall -O2 -g -std=c++11 -lpthread -Ithirdparty/lib/libst

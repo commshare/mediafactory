@@ -41,12 +41,15 @@
 #include "../../protocol/librtp/rtph264.h"
 #include "../../file/libh26x/h264demux.h"
 #include "rtspserver.h"
+#include "framer.h"
 
 #include "../../transport/tcp/tcpserver.h"
 #include "../../transport/udp/udpclient.h"
 
 typedef struct 
 {
+    std::string sourcename;
+
     std::string client_ip;
     int client_rtp_port;  
     unsigned int session_id;
@@ -81,62 +84,23 @@ void* tcpmediaproc(void *arg)
 
     ////////////////////////////////////////////////
     void* rtphandle = rtp_mux_init(1);
-    void* h264handle = H264Demux_Init((char*)"./test.264", 1);
-    if( !h264handle )
-    {
-      printf("H264Framer_Init error\n");
-      return NULL;
-    }
-    H264Configuration_t config;
-    if( H264Demux_GetConfig(h264handle, &config) < 0 )
-    {
-      printf("H264Demux_GetConfig error\n");
-      return NULL;
-    }
-    printf("H264Demux_GetConfig:width %d height %d framerate %d timescale %d %d %d \n",
-        config.width, config.height, config.framerate, config.timescale,
-        config.spslen, config.ppslen);
-
-    const char *h264frame = NULL;
-    int framelength = -1;
-    unsigned int timestamp = 0;
-
-    std::string temp_frame;
-
-    const char* rtp_buffer = NULL;
-    int rtp_packet_length, last_rtp_packet_length, rtp_packet_count;
+    void *framerhandle = framer_alloc(session->sourcename.c_str());
 
     while( 1 )
     {
-        int ret = H264Demux_GetFrame(h264handle, &h264frame, &framelength);
+        const char *h264frame = NULL;
+        int framelength = -1;
+        int ret = framer_getframe(framerhandle, &h264frame, &framelength);
         if( ret < 0 )
         {
-          printf("ReadOneNaluFromBuf error\n");
-          break;
+            printf("framer_getframe error\n");
+            break;
         }
 
-        int frametype = h264frame[4]&0x1f;
-/*
-        printf("frameinfo:%u %u %u %u %u frametype:%d framelength:%d \n", 
-              h264frame[0], h264frame[1], h264frame[2], h264frame[3],h264frame[4], 
-              frametype, framelength);
-*/
-        if( frametype == 5 )
-        {
-            H264Demux_GetConfig(h264handle, &config);
-            temp_frame.clear();
-            temp_frame.append(config.sps+4, config.spslen-4);
-            temp_frame.append(config.pps, config.ppslen);
-            temp_frame.append(h264frame, framelength);
-        }
-        else
-        {
-            temp_frame.clear();
-            temp_frame.append(h264frame+4, framelength-4);
-        }
+        rtp_set_h264_frame(rtphandle, h264frame, framelength);
 
-//        rtp_set_h264_frame_over_udp(rtphandle, h264frame+4, framelength-4);
-        rtp_set_h264_frame(rtphandle, temp_frame.data(), temp_frame.size());
+        const char* rtp_buffer = NULL;
+        int rtp_packet_length, last_rtp_packet_length, rtp_packet_count;
         rtp_get_h264_packet(rtphandle, &rtp_buffer, &rtp_packet_length, &last_rtp_packet_length, &rtp_packet_count);
 
         for( int i = 0;i < rtp_packet_count;i++ )
@@ -169,6 +133,8 @@ void* tcpmediaproc(void *arg)
         usleep(1000 * 40);//1000);
     }
 
+    rtp_mux_close(rtphandle);
+    framer_free(framerhandle);
     printf("tcpmediaproc exit \n");
     return NULL;
 }
@@ -188,57 +154,23 @@ void* udpmediaproc(void *arg)
 
     ////////////////////////////////////////////////
     void* rtphandle = rtp_mux_init(1);
-    void* h264handle = H264Demux_Init((char*)"./test.264", 1);
-    if( !h264handle )
-    {
-      printf("H264Framer_Init error\n");
-      return NULL;
-    }
-    H264Configuration_t config;
-    if( H264Demux_GetConfig(h264handle, &config) < 0 )
-    {
-      printf("H264Demux_GetConfig error\n");
-      return NULL;
-    }
-    printf("H264Demux_GetConfig:width %d height %d framerate %d timescale %d %d %d \n",
-        config.width, config.height, config.framerate, config.timescale,
-        config.spslen, config.ppslen);
-
-    const char *h264frame = NULL;
-    int framelength = -1;
-    unsigned int timestamp = 0;
-
-    std::string temp_frame;
-
-    const char* rtp_buffer = NULL;
-    int rtp_packet_length, last_rtp_packet_length, rtp_packet_count;
+    void *framerhandle = framer_alloc(session->sourcename.c_str());
 
     while( 1 )
     {
-        int ret = H264Demux_GetFrame(h264handle, &h264frame, &framelength);
+        const char *h264frame = NULL;
+        int framelength = -1;
+        int ret = framer_getframe(framerhandle, &h264frame, &framelength);
         if( ret < 0 )
         {
-          printf("ReadOneNaluFromBuf error\n");
-          break;
+            printf("framer_getframe error\n");
+            break;
         }
 
-        int frametype = h264frame[4]&0x1f;
-        if( frametype == 5 )
-        {
-            H264Demux_GetConfig(h264handle, &config);
-            temp_frame.clear();
-            temp_frame.append(config.sps+4, config.spslen-4);
-            temp_frame.append(config.pps, config.ppslen);
-            temp_frame.append(h264frame, framelength);
-        }
-        else
-        {
-            temp_frame.clear();
-            temp_frame.append(h264frame+4, framelength-4);
-        }
+        rtp_set_h264_frame(rtphandle, h264frame, framelength);
 
-//        rtp_set_h264_frame_over_udp(rtphandle, h264frame+4, framelength-4);
-        rtp_set_h264_frame(rtphandle, temp_frame.data(), temp_frame.size());
+        const char* rtp_buffer = NULL;
+        int rtp_packet_length, last_rtp_packet_length, rtp_packet_count;
         rtp_get_h264_packet(rtphandle, &rtp_buffer, &rtp_packet_length, &last_rtp_packet_length, &rtp_packet_count);
 
         for( int i = 0;i < rtp_packet_count;i++ )
@@ -264,6 +196,8 @@ void* udpmediaproc(void *arg)
     }
   
     udp_client_free(udphandle);
+      rtp_mux_close(rtphandle);
+    framer_free(framerhandle);
     printf("udpmediaproc exit \n");
     return NULL;
 }
@@ -324,6 +258,9 @@ void *handle_request(void *arg) {
       if( canSend )
       {
         printf("canSend\n");
+        const char* filename = NULL;
+        rtsp_demux_getfilename(rtspdemuxhandle, &filename);
+        session->sourcename = filename;
 
         session->client_rtp_port = rtsp_demux_get_client_rtp_port(rtspdemuxhandle);
         if( transport_proto == 0 )//udp

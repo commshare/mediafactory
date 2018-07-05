@@ -12,9 +12,11 @@ struct Framer_tag_t
     
     std::string sourcetype;
     std::string sourcename;
+
+    std::string framedata;
 };
 
-void* alloc_h264framer(H264Configuration_t *config)
+void* h264framer_alloc(H264Configuration_t *config)
 {
     void* h264handle = H264Demux_Init((char*)"./test.264", 1);
     if( !h264handle )
@@ -28,9 +30,51 @@ void* alloc_h264framer(H264Configuration_t *config)
         H264Demux_CLose(h264handle);
         return NULL;
     }
+    printf("H264Demux_GetConfig:width %d height %d framerate %d timescale %d %d %d \n",
+        config->width, config->height, config->framerate, config->timescale,
+        config->spslen, config->ppslen);
 
     return h264handle;
 }
+
+int h264framer_getframe(void* handle, const char** frame, int *length)
+{
+    Framer_tag_t *inst = (Framer_tag_t*)handle;
+    const char *h264frame = NULL;
+    int framelength = -1;
+    int ret = H264Demux_GetFrame(inst->framer_handle, &h264frame, &framelength);
+    if( ret < 0 )
+    {
+        printf("ReadOneNaluFromBuf error\n");
+        return -1;
+    }
+
+    int frametype = h264frame[4]&0x1f;
+/*
+    printf("frameinfo:%u %u %u %u %u frametype:%d framelength:%d \n", 
+          h264frame[0], h264frame[1], h264frame[2], h264frame[3],h264frame[4], 
+          frametype, framelength);
+*/
+    if( frametype == 5 )
+    {
+        H264Configuration_t config;
+        H264Demux_GetConfig(inst->framer_handle, &config);
+        inst->framedata.clear();
+        inst->framedata.append(config.sps+4, config.spslen-4);
+        inst->framedata.append(config.pps, config.ppslen);
+        inst->framedata.append(h264frame, framelength);
+    }
+    else
+    {
+        inst->framedata.clear();
+        inst->framedata.append(h264frame+4, framelength-4);
+    }
+    *frame = inst->framedata.data();
+    *length = inst->framedata.size();
+
+    return 0;
+}
+
 ///////////////////////////////////////////////////////////////////
 void* framer_alloc(const char* sourcename)
 {
@@ -40,10 +84,10 @@ void* framer_alloc(const char* sourcename)
         return NULL;
 
     H264Configuration_t h264config;
-    void* framer_handle = alloc_h264framer(&h264config);
+    void* framer_handle = h264framer_alloc(&h264config);
     if( !framer_handle )
     {
-        printf("alloc_h264framer error \n");
+        printf("h264framer_alloc error \n");
         return NULL;
     }
 
@@ -52,13 +96,17 @@ void* framer_alloc(const char* sourcename)
     inst->sourcetype = temp.substr(pos+1);
     inst->h264config = h264config;
     inst->framer_handle = framer_handle;
-    
+
     return inst;
 }
 
 int framer_getframe(void* handle, const char** frame, int *length)
 {
     Framer_tag_t *inst = (Framer_tag_t*)handle;
+    if( inst->sourcetype == "264" )
+    {
+        return h264framer_getframe(handle, frame, length);
+    }
 
     return 0;
 }
