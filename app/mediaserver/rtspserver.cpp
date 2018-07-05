@@ -154,14 +154,16 @@ void* tcpmediaproc(void *arg)
             if( ret < 0 )
             {
                 printf("tcp_server_write error\n");
-                break;
+//                break;
+                return NULL;
             }
             rtp_buffer += rtp_packet_length;
         }
 
         usleep(1000 * 40);//1000);
     }
-  
+
+    printf("tcpmediaproc exit \n");
     return NULL;
 }
 
@@ -256,6 +258,7 @@ void* udpmediaproc(void *arg)
     }
   
     udp_client_free(udphandle);
+    printf("udpmediaproc exit \n");
     return NULL;
 }
 
@@ -331,6 +334,7 @@ void *handle_request(void *arg) {
     }
 
     close(session->client_fd);
+    printf("handle_request exit \n");
 }
 
 //////////////////////////////////////////////////////////
