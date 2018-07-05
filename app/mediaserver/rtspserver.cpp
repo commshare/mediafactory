@@ -301,15 +301,16 @@ void *handle_request(void *arg) {
 
       printf("msg\n%s\n", msg.c_str());
       int canSend = 0, transport_proto = -1;
-      std::string response = rtsp_demux_parse(rtspdemuxhandle, msg.c_str(), transport_proto, canSend);
-//      std::string response = rtsp_parse(buf,canSend);
-      if( response != "")
-      {
-        printf("response\n%s\n",response.c_str());
-        int nw = tcp_server_write(session->handle, session->client_fd, (char*)response.c_str(), response.size());
-        if (nw < 0)
-          break;
-      }
+      const char* strResponse = NULL;
+      int ret = rtsp_demux_parse(rtspdemuxhandle, msg.c_str(), &strResponse, transport_proto, canSend);
+      if( ret < 0 )
+        break;
+
+      std::string response = strResponse;
+      printf("response\n%s\n",response.c_str());
+      int nw = tcp_server_write(session->handle, session->client_fd, (char*)response.c_str(), response.size());
+      if (nw < 0)
+        break;
 
       if( canSend )
       {

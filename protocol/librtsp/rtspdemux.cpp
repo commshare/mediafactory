@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include <string>
 #include "rtspdemux.h"
@@ -13,6 +14,10 @@ typedef struct
     int server_rtp_port;
     std::string client_session_id;
     int transport_protocol;//0-udp,1-tcp,2-http
+
+    std::string filename;
+    std::string filenameext;
+    std::string response;
 }rtsp_demux_desc_t;
 
 int url_getmsg(std::string &buffer, std::string &msg)
@@ -26,12 +31,19 @@ int url_getmsg(std::string &buffer, std::string &msg)
     return 0;
 }
 /////////////////////////////////////////////
-std::string getResponse_OPTIONS(const char *server, std::string &seq)
+std::string getResponse_OPTIONS(int errorCode, const char *server, std::string &seq)
 {
-    std::string strResponse = "RTSP/1.0 200 OK \r\n" \
-                    "Cseq: " + seq + " \r\n" \
-                    "Public: DESCRIBE, SETUP, TEARDOWN, PLAY, PAUSE, OPTIONS, ANNOUNCE, RECORD\r\n" \
-                    "\r\n";
+    std::string strResponse;
+    if( errorCode == 200 )
+        strResponse = "RTSP/1.0 200 OK \r\n" \
+                        "Cseq: " + seq + " \r\n" \
+                        "Public: DESCRIBE, SETUP, TEARDOWN, PLAY, PAUSE, OPTIONS, ANNOUNCE, RECORD\r\n" \
+                        "\r\n";
+    else
+        strResponse = "RTSP/1.0 404 Not Found \r\n" \
+                        "Cseq: " + seq + " \r\n" \
+                        "Public: DESCRIBE, SETUP, TEARDOWN, PLAY, PAUSE, OPTIONS, ANNOUNCE, RECORD\r\n" \
+                        "\r\n";
 
     return strResponse;
 }
@@ -159,14 +171,26 @@ void* rtsp_demux_init(const char* sessionid, int local_rtp_port)
     return (void*)handle;
 }
 
-std::string rtsp_demux_parse(void* handle, const char* request, int &transport_proto, int &canSend)
+int rtsp_demux_parse(void* handle, const char* request, const char** response, int &transport_proto, int &canSend)
 {
     rtsp_demux_desc_t* rtsp_demux = (rtsp_demux_desc_t*)handle;
 
     canSend = 0;
     std::string strRequest = request;
     int pos = strRequest.find(' ');
-    std::string head = strRequest.substr(0,pos), strResponse;
+    std::string method = strRequest.substr(0,pos), strResponse;
+
+    if( rtsp_demux->filename == "" )
+    {
+        int pos1 = strRequest.find(' ', pos+1);
+        std::string url = strRequest.substr(pos+1,pos1-pos-1);
+        pos = url.rfind('/');
+        rtsp_demux->filename = url.substr(pos+1);
+        pos = rtsp_demux->filename.rfind('.');
+        rtsp_demux->filenameext = rtsp_demux->filename.substr(pos+1);    
+
+//        printf("filename=%s filenameext=%s\n", rtsp_demux->filename.c_str(), rtsp_demux->filenameext.c_str());            
+    }
 
     pos = strRequest.find("CSeq: ");
     int pos1 = strRequest.find("\r\n", pos);
@@ -174,15 +198,23 @@ std::string rtsp_demux_parse(void* handle, const char* request, int &transport_p
     std::string strCSeq = strRequest.substr(pos+6, pos1-pos-6);
 //    printf("CSeq=%s \n", strCSeq.c_str());
 
-    if( head == "OPTIONS" )
+    int result = 0;
+    if( method == "OPTIONS" )
     {
-        strResponse = getResponse_OPTIONS("Robert RTSPServer", strCSeq);
+        int errCode = 200;
+        if( access(rtsp_demux->filename.c_str(), 0) != 0 )
+        {
+            errCode = 404;
+            result = -1;
+        }
+
+        rtsp_demux->response = getResponse_OPTIONS(errCode, "Robert RTSPServer", strCSeq);
     }
-    else if( head == "DESCRIBE" )
+    else if( method == "DESCRIBE" )
     {
-        strResponse = getResponse_DESCRIBE(strCSeq);
+        rtsp_demux->response = getResponse_DESCRIBE(strCSeq);
     }
-    else if( head == "SETUP" )
+    else if( method == "SETUP" )
     {
         pos = strRequest.find("RTP/AVP/TCP");
 //        printf("setup pos = %d \n", pos);
@@ -190,7 +222,7 @@ std::string rtsp_demux_parse(void* handle, const char* request, int &transport_p
         if(  pos > 0 )
         {
             rtsp_demux->transport_protocol = 1;
-            strResponse = getResponse_SETUP_TCP(rtsp_demux->client_session_id.c_str(), strCSeq);            
+            rtsp_demux->response = getResponse_SETUP_TCP(rtsp_demux->client_session_id.c_str(), strCSeq);            
         }
         else
         {
@@ -199,29 +231,31 @@ std::string rtsp_demux_parse(void* handle, const char* request, int &transport_p
             pos1 = strRequest.find(pos);
             std::string strTemp = strRequest.substr(pos+strlen("client_port="),pos1-pos);
             rtsp_demux->client_rtp_port = atoi(strTemp.c_str());
-            strResponse = getResponse_SETUP_UDP(rtsp_demux->client_session_id.c_str(), atoi(strTemp.c_str()), rtsp_demux->server_rtp_port, strCSeq);            
+            rtsp_demux->response = getResponse_SETUP_UDP(rtsp_demux->client_session_id.c_str(), atoi(strTemp.c_str()), rtsp_demux->server_rtp_port, strCSeq);            
         }
     }
-    else if( head == "PLAY" )
+    else if( method == "PLAY" )
     {
-        strResponse = getResponse_PLAY(rtsp_demux->client_session_id.c_str(), strCSeq);        
+        rtsp_demux->response = getResponse_PLAY(rtsp_demux->client_session_id.c_str(), strCSeq);        
         canSend = 1;
         transport_proto = rtsp_demux->transport_protocol;
     }
-    else if( head == "PAUSE" )
+    else if( method == "PAUSE" )
     {
-        strResponse = getResponse_PAUSE(rtsp_demux->client_session_id.c_str(), strCSeq);        
+        rtsp_demux->response = getResponse_PAUSE(rtsp_demux->client_session_id.c_str(), strCSeq);        
     }
-    else if( head == "TEARDOWN" )
+    else if( method == "TEARDOWN" )
     {
-        strResponse = getResponse_TEARDOWN(rtsp_demux->client_session_id.c_str(), strCSeq);        
+        rtsp_demux->response = getResponse_TEARDOWN(rtsp_demux->client_session_id.c_str(), strCSeq);        
     }
     else
     {
-        printf("unknown head\n");
+        printf("unknown method\n");
+        result = -1;
     }
-    
-    return strResponse;
+    *response = rtsp_demux->response.c_str();
+
+    return result;
 }
 
 int rtsp_demux_get_client_rtp_port(void* handle)
