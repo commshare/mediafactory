@@ -31,6 +31,17 @@ static const char *statusCode30x[] =
     "Temporary Redirect", // 307
 };
 
+static const char *statusCode40x[] = 
+{
+    "Bad Request", // 400
+    "Unauthorized", // 401
+    "Payment Required", // 402
+    "Forbidden", // 403
+    "Not Found", // 404
+    "Method Not Allowed", // 405
+    "Not Acceptable", // 406
+};
+
 static const char *statusCode45x[] = 
 {
     "Parameter Not Understood", // 451
@@ -45,6 +56,19 @@ static const char *statusCode45x[] =
     "Only Aggregate Operation Allowed", // 460
     "Unsupported Transport", // 461
     "Destination Unreachable", // 462
+};
+
+static const char *statusCode50x[] = 
+{
+    "Internal Server Error", // 500
+    "Not Implemented", // 501
+    "Bad Gateway", // 502
+    "Service Unavailable", // 503
+    "Gateway Timeout", // 504
+    "HTTP Version Not Supported", // 505
+    "Variant Also Negotiates", // 506
+    "Insufficient Storage", // 507
+    "Bandwidth Limit Exceeded", // 508
 };
 
 int rtsp_get_error_info(int code, const char** errorinfo)
