@@ -64,13 +64,15 @@ static void SegvHandler(int signum) {
 
 int main()
 {
-  signal(SIGSEGV, SegvHandler); // SIGSEGV      11       Core    Invalid memory reference
-  signal(SIGABRT, SegvHandler); // SIGABRT       6       Core    Abort signal from
+    signal(SIGSEGV, SegvHandler); // SIGSEGV      11       Core    Invalid memory reference
+    signal(SIGABRT, SegvHandler); // SIGABRT       6       Core    Abort signal from
 
-  rtspserv(554);
+    void* handle = rtspserv(554);
 
-  for(;;)
-  {
-    sleep(1);
-  }
+    for(;;)
+    {
+        sleep(1);
+    }
+    
+    rtspstop(handle);
 }

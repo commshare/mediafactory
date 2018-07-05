@@ -25,3 +25,5 @@
 #include "st.h"
 
 void *rtspserv(int port);
+
+int rtspstop(void* handle);

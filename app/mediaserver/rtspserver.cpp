@@ -369,11 +369,10 @@ int myon_close_callback(void* handle, int sockfd, void* userdata)
 
 void *rtspserv(int port)
 {
-  void* handle = tcp_server_new("0.0.0.0", port, myon_connect_callback, myon_close_callback, NULL);
+    return tcp_server_new("0.0.0.0", port, myon_connect_callback, myon_close_callback, NULL);
+}
 
-//int tcp_server_write(void* handle, int sockfd, const char* data, int length);
-
-//  tcp_server_free(handle);
-
-  return 0;
+int rtspstop(void* handle)
+{
+    return tcp_server_free(handle);
 }
