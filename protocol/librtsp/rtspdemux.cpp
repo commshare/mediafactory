@@ -171,6 +171,14 @@ void* rtsp_demux_init(const char* sessionid, int local_rtp_port)
     return (void*)handle;
 }
 
+int rtsp_demux_getfileext(void* handle, const char** fileext)
+{
+    rtsp_demux_desc_t* rtsp_demux = (rtsp_demux_desc_t*)handle;
+    *fileext = rtsp_demux->filenameext.c_str();
+
+    return 0;
+}
+
 int rtsp_demux_parse(void* handle, const char* request, const char** response, int &transport_proto, int &canSend)
 {
     rtsp_demux_desc_t* rtsp_demux = (rtsp_demux_desc_t*)handle;
