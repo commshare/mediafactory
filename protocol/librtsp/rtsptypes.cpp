@@ -7,6 +7,18 @@ static const char *statusCode10x[] =
     "Processing", // 102
 };
 
+static const char *statusCode20x[] = 
+{
+    "OK", // 200
+    "Created", // 201
+    "Accepted", // 202
+    "Non-Authoritative Information", // 203
+    "No Content", // 204
+    "Reset Content", // 205
+    "Partial Content", // 206
+    "Multi-Status", // 207
+};
+
 static const char *statusCode45x[] = 
 {
     "Parameter Not Understood", // 451
