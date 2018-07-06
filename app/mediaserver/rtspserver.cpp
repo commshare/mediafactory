@@ -302,6 +302,8 @@ int myon_connect_callback(void* handle, int sockfd, void* userdata)
 int myon_close_callback(void* handle, int sockfd, void* userdata)
 {
     printf("myon_close_callback %d \n", sockfd);
+    
+    tcp_server_close(handle, sockfd);
 
     return 0;
 }

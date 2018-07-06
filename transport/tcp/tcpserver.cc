@@ -24,6 +24,8 @@ struct tcpclientdesc_t {
 
     std::string recvbuffer;
     std::string sendbuffer, tempsendbuffer;    
+
+    int status;
 };
 
 typedef std::map<int, tcpclientdesc_t*> TCPCLIENTMAP;
@@ -39,6 +41,9 @@ struct tcpserverdesc_t {
     std::thread threadeventloop;
 
     TCPCLIENTMAP clients;
+    std::mutex clientsmutex;
+
+    volatile int stopped;
 };
 
 int setnonblocking(int sock)
@@ -92,7 +97,7 @@ int tcp_server_eventloop(void* handle)
 
     char buffer[1024 * 5] = {0};
 
-    while( 1 ) 
+    while( !inst->stopped ) 
     {
         //等待epoll事件的发生
         int nfds=epoll_wait(epfd,events,20,500);
@@ -117,6 +122,7 @@ int tcp_server_eventloop(void* handle)
                 tcpclientdesc_t *client = new tcpclientdesc_t;
                 client->sockfd = connfd;
                 client->ip = str;
+                client->status = 0;
                 inst->clients[connfd] = client;
 
                 //设置用于读操作的文件描述符
@@ -151,7 +157,7 @@ int tcp_server_eventloop(void* handle)
                         
                             close(sockfd);
                             events[i].data.fd = -1;
-                            inst->clients.erase(iter);
+                            iter->second->status = -1;
                         }
                         break;
                     } else if (n == 0) {
@@ -160,7 +166,7 @@ int tcp_server_eventloop(void* handle)
 
                         close(sockfd);
                         events[i].data.fd = -1;
-                        inst->clients.erase(iter);
+                        iter->second->status = -1;
                         break;
                     }
                     buffer[n] = '\0';
@@ -234,10 +240,24 @@ void* tcp_server_new(const char* localip, int localport, on_connect_callback con
     inst->connectcallback = connectcallback;
     inst->closecallback = closecallback;
     inst->userdata = userdata;
+    inst->stopped = 0;
 
     inst->threadeventloop = std::thread(tcp_server_eventloop, (void*)inst);
 
     return inst;
+}
+
+int tcp_server_read2(void* handle, int clientid, char* data, int length)
+{
+    tcpserverdesc_t * inst = (tcpserverdesc_t*)handle;
+
+    int ret = read(clientid, data, length);
+    if( ret < 0 )
+    {  
+        perror("read error:");  
+        return -1;  
+    }
+    return 0;
 }
 
 int tcp_server_read(void* handle, int clientid, char* data, int length)
@@ -246,6 +266,9 @@ int tcp_server_read(void* handle, int clientid, char* data, int length)
 
     TCPCLIENTMAP::iterator iter = inst->clients.find(clientid);
     if( iter == inst->clients.end() )
+        return -1;
+
+    if( iter->second->status < 0 )
         return -1;
 
     int reallength = 0;
@@ -279,9 +302,17 @@ int tcp_server_write(void* handle, int clientid, const char* data, int length)
     if( iter == inst->clients.end() )
         return -1;
 
+    if( iter->second->status < 0 )
+        return -1;
+
     int writelen = write(clientid, data, length);
 //    printf("writelen=%d, length=%d \n", writelen, length);
-    return writelen;
+    if(  writelen <= 0)
+    {  
+        perror("writelen error:");  
+        return -1;  
+    }
+    return 0;
 
 /*
     iter->second->sendmutex.lock();
@@ -310,6 +341,7 @@ int tcp_server_close(void* handle, int clientid)
 int tcp_server_free(void* handle)
 {
     tcpserverdesc_t * inst = (tcpserverdesc_t*)handle;
+    inst->stopped = 1;
 
     if( !inst->clients.empty() )
     {
