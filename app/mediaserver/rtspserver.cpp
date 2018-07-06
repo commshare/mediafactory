@@ -111,20 +111,19 @@ void* tcpmediaproc(void *arg)
             {
                 ri.rtp_len = htons(last_rtp_packet_length);
                 ret = tcp_server_write(tcpserverhandle, client_fd, (const char*)&ri, sizeof(ri));
+                if( ret < 0 ){printf("tcp_server_write error\n");break;}
                 ret = tcp_server_write(tcpserverhandle, client_fd, rtp_buffer, last_rtp_packet_length);
+                if( ret < 0 ){printf("tcp_server_write error\n");break;}
             }
             else
             {
                 ri.rtp_len = htons(rtp_packet_length);
                 ret = tcp_server_write(tcpserverhandle, client_fd, (const char*)&ri, sizeof(ri));
+                if( ret < 0 ){printf("tcp_server_write error\n");break;}
                 ret = tcp_server_write(tcpserverhandle, client_fd, rtp_buffer, rtp_packet_length);
+                if( ret < 0 ){printf("tcp_server_write error\n");break;}
             }
 
-            if( ret < 0 )
-            {
-                printf("tcp_server_write error\n");
-                break;
-            }
             rtp_buffer += rtp_packet_length;
         }
 
@@ -137,6 +136,7 @@ void* tcpmediaproc(void *arg)
 
     rtp_mux_close(rtphandle);
     framer_free(framerhandle);
+    tcp_server_close(tcpserverhandle, client_fd);
     printf("tcpmediaproc exit \n");
     return NULL;
 }

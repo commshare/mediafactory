@@ -119,6 +119,7 @@ int tcp_server_eventloop(void* handle)
 
                 char *str = inet_ntoa(clientaddr.sin_addr);
 //                std::cout << "accapt a connection from " << str << std::endl;
+/*
                 tcpclientdesc_t *client = new tcpclientdesc_t;
                 client->sockfd = connfd;
                 client->ip = str;
@@ -133,7 +134,7 @@ int tcp_server_eventloop(void* handle)
 
                 //注册ev
                 epoll_ctl(epfd,EPOLL_CTL_ADD,connfd,&ev);
-            }
+*/            }
             else if(events[i].events&EPOLLIN)//如果是已经连接的用户，并且收到数据，那么进行读入。
             {
 //                std::cout<<"read"<<std::endl;
@@ -247,23 +248,28 @@ void* tcp_server_new(const char* localip, int localport, on_connect_callback con
     return inst;
 }
 
-int tcp_server_read2(void* handle, int clientid, char* data, int length)
-{
-    tcpserverdesc_t * inst = (tcpserverdesc_t*)handle;
-
-    int ret = read(clientid, data, length);
-    if( ret < 0 )
-    {  
-        perror("read error:");  
-        return -1;  
-    }
-    return 0;
-}
-
 int tcp_server_read(void* handle, int clientid, char* data, int length)
 {
     tcpserverdesc_t * inst = (tcpserverdesc_t*)handle;
 
+    int ret = read(clientid, data, length);
+    if( ret == 0 )
+    {
+        perror("tcp_server_read error:");  
+        return -1;
+    }
+
+    if( ret < 0 )
+    {  
+//        printf("tcp_server_read ret = %d \n", ret);
+        if( errno == EAGAIN )
+            return 0;
+
+        perror("tcp_server_read error:");  
+        return -1;  
+    }
+    return ret;
+/*    
     TCPCLIENTMAP::iterator iter = inst->clients.find(clientid);
     if( iter == inst->clients.end() )
         return -1;
@@ -292,12 +298,35 @@ int tcp_server_read(void* handle, int clientid, char* data, int length)
     iter->second->recvmutex.unlock();
 
     return reallength;
+*/
 }
 
 int tcp_server_write(void* handle, int clientid, const char* data, int length)
 {
     tcpserverdesc_t * inst = (tcpserverdesc_t*)handle;
 
+    int ret = write(clientid, data, length);
+//    printf("writelen=%d, length=%d \n", writelen, length);
+    while( ret <= 0 )
+    {  
+        if( errno != EAGAIN )
+        {
+            perror("tcp_server_write error:");  
+            return -1;  
+        }
+        else if( ret == 0 && errno == EAGAIN )
+        {
+            perror("tcp_server_write error:");  
+            return -1;  
+        }
+
+        ret = write(clientid, data, length);
+        if( errno == EAGAIN )
+            continue;
+    }
+    return ret;
+
+/*
     TCPCLIENTMAP::iterator iter = inst->clients.find(clientid);
     if( iter == inst->clients.end() )
         return -1;
@@ -305,27 +334,22 @@ int tcp_server_write(void* handle, int clientid, const char* data, int length)
     if( iter->second->status < 0 )
         return -1;
 
-    int writelen = write(clientid, data, length);
-//    printf("writelen=%d, length=%d \n", writelen, length);
-    if(  writelen <= 0)
-    {  
-        perror("writelen error:");  
-        return -1;  
-    }
-    return 0;
-
-/*
     iter->second->sendmutex.lock();
     iter->second->sendbuffer.append(data, length);
     iter->second->sendmutex.unlock();
-*/
+
     return 0;
+*/
 }
 
 int tcp_server_close(void* handle, int clientid)
 {
     tcpserverdesc_t * inst = (tcpserverdesc_t*)handle;
 
+    close(clientid);
+    return 0;
+
+/*
     TCPCLIENTMAP::iterator iter = inst->clients.find(clientid);
     if( iter == inst->clients.end() )
         return -1;
@@ -336,6 +360,7 @@ int tcp_server_close(void* handle, int clientid)
     inst->clients.erase(iter);
 
     return 0;
+*/
 }
 
 int tcp_server_free(void* handle)
