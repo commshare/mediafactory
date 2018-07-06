@@ -35,7 +35,8 @@ int testaac3()
 //ffplay -f rawvideo -video_size 1280x720 xxx.yuv
 int testaac4()
 {
-	void* handle = video_generator_alloc(352, 288, 1);
+	void* handle = video_generator_alloc(960, 360, 1);
+//	void* handle = video_generator_alloc(352, 288, 1);
 	std::fstream fs;
 	fs.open("1.yuv", std::ios::binary|std::ios::out);
 

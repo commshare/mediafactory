@@ -23,8 +23,10 @@ void *video_generator_alloc(int width, int height, int pixel_format)
 	video_generator_tag_t *inst = new video_generator_tag_t;
 
 	inst->frame_index = 0;
-	inst->width = ( width / 4 ) * 4;//(width/4 + width/4%2) * 4;
-	inst->height = ( height / 4 ) * 4;//(height/4 + height/4%2) * 4;
+//	inst->width = (width/4 + width/4%2) * 4;
+//	inst->height = (height/4 + height/4%2) * 4;
+	inst->width = ( width / 4 ) * 4;
+	inst->height = ( height / 4 ) * 4;
 	inst->pixel_format = pixel_format;
 
 	inst->linesizeY = inst->width;
