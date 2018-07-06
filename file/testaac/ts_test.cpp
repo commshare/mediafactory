@@ -1,5 +1,6 @@
 #include <stdio.h>  
 #include <sstream>
+#include <unistd.h>
 
 #include "aacdemux.h"
 #include "h264demux.h"

@@ -202,7 +202,7 @@ int ffmpeg_enc_encode_audio(void *handle, const char* framedata, int length,
     int got_packet;
     int ret = avcodec_encode_audio2(inst->pCodecCtx, &pkt, inst->audio_frame, &got_packet);
     if (ret < 0) {
-        fprintf(stderr, "Error encoding audio frame: %s\n", av_err2str(ret));
+        printf("Error encoding audio frame: %d\n", ret);
         return -1;
     }
     printf("avcodec_encode_audio2 %d %d %d %d %d\n", inst->audio_frame->linesize[0],inst->audio_frame->linesize[1], 
@@ -235,7 +235,7 @@ int ffmpeg_enc_encode_video(void *handle, const char* framedata, int length,
     int got_packet;
     int ret = avcodec_encode_video2(inst->pCodecCtx, &pkt, inst->video_frame, &got_packet);
     if (ret < 0) {
-        fprintf(stderr, "Error encoding video frame: %s\n", av_err2str(ret));
+        printf("Error encoding video frame: %d\n", ret);
         return -1;
     }
 

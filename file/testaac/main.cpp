@@ -37,7 +37,7 @@ int main()
 
 //	return testaac3();
 
-//	return testaac4();
+	return testaac4();
 
 //	return testaac5();
  

@@ -2,7 +2,7 @@ C 			 = c
 CPP 		 = cpp
 CXX = gcc
 CXXFLAGS = -w -g -D__STDC_CONSTANT_MACROS -I ../tsmux/
-LIBS =  -lstdc++ -lpthread -lavformat -lavutil -lavfilter
+LIBS =  -lstdc++ -lpthread -lavformat -lavcodec -lavfilter -lswscale -lswresample -lavutil -lavfilter -lm 
 
 TARGET0 = testaac
 

@@ -1,5 +1,7 @@
 #include <fstream>
 #include <string>
+#include <unistd.h>
+
 #include "audio_generator.h"
 #include "video_generator.h"
 #include "ffmpeg_enc.h"
