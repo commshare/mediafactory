@@ -16,9 +16,9 @@ struct Framer_tag_t
     std::string framedata;
 };
 
-void* h264framer_alloc(H264Configuration_t *config)
+void* h264framer_alloc(const char* sourcename, H264Configuration_t *config)
 {
-    void* h264handle = H264Demux_Init((char*)"./test.264", 1);
+    void* h264handle = H264Demux_Init((char*)sourcename, 1);
     if( !h264handle )
     {
         printf("H264Framer_Init error\n");
@@ -84,7 +84,7 @@ void* framer_alloc(const char* sourcename)
         return NULL;
 
     H264Configuration_t h264config;
-    void* framer_handle = h264framer_alloc(&h264config);
+    void* framer_handle = h264framer_alloc(sourcename, &h264config);
     if( !framer_handle )
     {
         printf("h264framer_alloc error \n");

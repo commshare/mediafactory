@@ -84,6 +84,8 @@ void* tcpmediaproc(void *arg)
 
     ////////////////////////////////////////////////
     void* rtphandle = rtp_mux_init(1);
+
+    printf("session->sourcename = %s \n", session->sourcename.c_str());
     void *framerhandle = framer_alloc(session->sourcename.c_str());
 
     while( 1 )
