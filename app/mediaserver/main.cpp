@@ -43,18 +43,16 @@
 #include <execinfo.h>
 
 static void SegvHandler(int signum) {
-    void *array[10];
-    size_t size;
-    char **strings;
-    size_t i, j;
+#define ARRAY_SIZE 100
 
+    void *array[ARRAY_SIZE];
     signal(signum, SIG_DFL);
 
-    size = backtrace (array, 10);
-    strings = (char **)backtrace_symbols (array, size);
+    size_t size = backtrace (array, ARRAY_SIZE);
+    char **strings = (char **)backtrace_symbols (array, size);
 
     fprintf(stderr, "SegvHandler received SIGSEGV! Stack trace:\n");
-    for (i = 0; i < size; i++) {
+    for (size_t i = 0; i < size; i++) {
         fprintf(stderr, "%d %s \n",i,strings[i]);
     }
 
