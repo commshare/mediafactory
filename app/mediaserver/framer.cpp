@@ -24,6 +24,7 @@ void* h264framer_alloc(const char* sourcename, H264Configuration_t *config)
         printf("H264Framer_Init error\n");
         return NULL;
     }
+    
     if( H264Demux_GetConfig(h264handle, config) < 0 )
     {
         printf("H264Demux_GetConfig error\n");
