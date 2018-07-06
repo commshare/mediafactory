@@ -253,15 +253,17 @@ int tcp_server_read(void* handle, int clientid, char* data, int length)
     tcpserverdesc_t * inst = (tcpserverdesc_t*)handle;
 
     int ret = read(clientid, data, length);
-    if( ret == 0 )
+    //closed by peer
+    if( ret == 0 && errno == EAGAIN )
     {
-        perror("tcp_server_read error:");  
+        printf("tcp_server_read error:socket reset by peer \n");  
         return -1;
     }
 
     if( ret < 0 )
     {  
 //        printf("tcp_server_read ret = %d \n", ret);
+        //no data received
         if( errno == EAGAIN )
             return 0;
 
