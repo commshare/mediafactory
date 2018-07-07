@@ -1,5 +1,5 @@
-#ifndef __RTPH264_h__
-#define __RTPH264_h__
+#ifndef __RTPAAC_h__
+#define __RTPAAC_h__
 
 #include <stdio.h>  
 #include <stdlib.h>  
@@ -7,15 +7,13 @@
 
 #include "rtp.h"
 
-int get_local_rtp_rtcp_port(int *rtp_sock, int *rtp_port, int *rtcp_sock, int *rtcp_port);
+void* rtpmux_aac_alloc(unsigned long ssrc);
 
-void* rtp_mux_init(unsigned long ssrc);
+int rtpmux_aac_setframe(void* handle, const char* frame_buffer, int frame_length);
 
-int rtp_set_h264_frame(void* handle, const char* frame_buffer, int frame_length);
-
-int rtp_get_h264_packet(void* handle, const char **rtp_buffer, int *rtp_packet_length,
+int rtpmux_aac_getpacket(void* handle, const char **rtp_buffer, int *rtp_packet_length,
             int *rtp_last_packet_length, int *rtp_packet_count);
 
-int rtp_mux_close(void* handle);
+int rtpmux_aac_free(void* handle);
 
 #endif
