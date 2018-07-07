@@ -65,6 +65,8 @@ int rtpmux_aac_setframe(void* handle, const char* frame_buffer, int frame_length
     AU_HEADER auheaer;
     auheaer.headerlength = htons(0x10);//header length is fixed as 16bit
 
+    frame_length -= 7;
+    frame_buffer += 7;
     //  当一个NALU小于1400字节的时候，采用一个单RTP包发送  
     if(frame_length <= MAX_RTP_BODY_LENGTH)  
     {     
