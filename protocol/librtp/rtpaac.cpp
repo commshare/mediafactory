@@ -30,8 +30,7 @@ typedef struct
 typedef struct {  
     //byte 0  
     uint16_t headerlength;
-    uint8_t payloadlength;//high 13bit is payloadlength, low 3bit is 0
-    uint8_t payloadlength2;
+    uint16_t payloadlength;//high 13bit is payloadlength, low 3bit is 0
 } AU_HEADER; /**//* 1 BYTES */  
 
 #pragma pack(pop)
@@ -84,15 +83,16 @@ int rtpmux_aac_setframe(void* handle, const char* frame_buffer, int frame_length
         p[2] = (frame_length & 0xff) >> 3;
         p[3] = (frame_length & 0xff) << 5;
 
-        auheaer.payloadlength = frame_length;//frame_length<<3;
-//        rtp_mux->rtp_buffer.append((char*)&auheaer, sizeof(auheaer));
-        rtp_mux->rtp_buffer.append((char*)p, sizeof(auheaer));
+        auheaer.payloadlength = htons(frame_length << 3);
+//        auheaer.payloadlength = htons(auheaer.payloadlength<<3);
+        rtp_mux->rtp_buffer.append((char*)&auheaer, sizeof(auheaer));
+
 //        printf("sizeof(rtp_hdr)=%d %d \n", sizeof(rtp_hdr), rtp_mux->rtp_buffer.size());
         //NAL单元的第一字节和RTP荷载头第一个字节重合
         rtp_mux->rtp_buffer.append(frame_buffer, frame_length);
 
         rtp_mux->packet_count = 1;
-        rtp_mux->last_packet_length = frame_length + sizeof(rtp_hdr);
+        rtp_mux->last_packet_length = frame_length + sizeof(rtp_hdr) + sizeof(auheaer);
     }
     else
     {

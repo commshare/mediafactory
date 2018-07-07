@@ -67,8 +67,6 @@ std::string getResponse_DESCRIBE(std::string &streamtype, std::string &seq)
                 "m=audio  0 RTP/AVP 97\r\n" \
                 "a=rtpmap:97 mpeg4-generic/24000/2\r\n" \
                 "a=fmtp:97 profile-level-id=15; config=1310;streamtype=5; ObjectType=64; mode=AAC-hbr; SizeLength=13; IndexLength=3;IndexDeltaLength=3" \
-    //            "fmtp:96 packetization-mode=1;profile-level-id=64000D;sprop-parameter-sets=Z2QADaw06BQfoQAAAwABAAADADKPFCqg,aO4BLyw=\r\n" \
-
                 "c=IN IP4 0.0.0.0";
 
     strSDP += "\r\n";
