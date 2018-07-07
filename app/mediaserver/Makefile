@@ -8,6 +8,7 @@ OBJS = ../../protocol/librtp/rtph264.o \
 		../../transport/udp/udpclient.o \
 		rtspserver.o \
 		demuxer.o \
+		muxer.o \
 		main.o
 
 CXXFLAGS = -g -W -Wall -O2 -g -std=c++11 -lpthread -Ithirdparty/lib/libst

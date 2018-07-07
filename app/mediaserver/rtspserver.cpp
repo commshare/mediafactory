@@ -39,9 +39,9 @@
 
 #include "../../protocol/librtsp/rtspdemux.h"
 #include "../../protocol/librtp/rtph264.h"
-#include "../../file/libh26x/h264demux.h"
 #include "rtspserver.h"
 #include "demuxer.h"
+#include "muxer.h"
 
 #include "../../transport/tcp/tcpserver.h"
 #include "../../transport/udp/udpclient.h"
@@ -49,6 +49,7 @@
 typedef struct 
 {
     std::string sourcename;
+    std::string sourcetype;
 
     std::string client_ip;
     int client_rtp_port;  
@@ -83,7 +84,7 @@ void* tcpmediaproc(void *arg)
     ri.channel = 0;
 
     ////////////////////////////////////////////////
-    void* rtphandle = rtpmux_h264_alloc(1);
+    void *muxerhandle = muxer_alloc(session->sourcetype.c_str());
 
     printf("session->sourcename = %s \n", session->sourcename.c_str());
     void *framerhandle = demuxer_alloc(session->sourcename.c_str());
@@ -98,12 +99,12 @@ void* tcpmediaproc(void *arg)
             printf("framer_getframe error\n");
             break;
         }
-
-        rtpmux_h264_setframe(rtphandle, h264frame, framelength);
+        
+        muxer_setframe(muxerhandle, h264frame, framelength);
 
         const char* rtp_buffer = NULL;
         int rtp_packet_length, last_rtp_packet_length, rtp_packet_count;
-        rtpmux_h264_getpacket(rtphandle, &rtp_buffer, &rtp_packet_length, &last_rtp_packet_length, &rtp_packet_count);
+        muxer_getpacket(muxerhandle, &rtp_buffer, &rtp_packet_length, &last_rtp_packet_length, &rtp_packet_count);
 
         for( int i = 0;i < rtp_packet_count;i++ )
         {
@@ -134,7 +135,7 @@ void* tcpmediaproc(void *arg)
         usleep(1000 * 40);//1000);
     }
 
-    rtpmux_h264_free(rtphandle);
+    muxer_free(muxerhandle);
     demuxer_free(framerhandle);
     tcp_server_close(tcpserverhandle, client_fd);
     printf("tcpmediaproc exit \n");
@@ -263,7 +264,10 @@ void *handle_request(void *arg) {
         const char* filename = NULL;
         rtsp_demux_getfilename(rtspdemuxhandle, &filename);
         session->sourcename = filename;
-
+        const char* filetype = NULL;
+        rtsp_demux_getfileext(rtspdemuxhandle, &filetype);
+        session->sourcetype = filetype;
+        
         session->client_rtp_port = rtsp_demux_get_client_rtp_port(rtspdemuxhandle);
         if( transport_proto == 0 )//udp
         {
