@@ -4,6 +4,7 @@
 
 #include "demuxer.h"
 #include "../../file/libh26x/h264demux.h"
+#include "../../file/libaac/aacdemux.h"
 
 struct demuxer_tag_t
 {
@@ -90,6 +91,10 @@ void* demuxer_alloc(const char* sourcename)
         H264Configuration_t h264config;
         framer_handle = h264framer_alloc(sourcename, &h264config);
     }
+    else if( sourcetype == "aac" )
+    {
+        framer_handle = AACDemux_Init(sourcename, 1);
+    }
 
     if( !framer_handle )
     {
@@ -112,6 +117,10 @@ int demuxer_getframe(void* handle, const char** frame, int *length)
     {
         return h264framer_getframe(handle, frame, length);
     }
+    else if( inst->sourcetype == "aac" )
+    {
+        return AACDemux_GetFrame(inst->framer_handle, frame, length);
+    }
 
     return 0;
 }
@@ -122,6 +131,10 @@ int demuxer_free(void *handle)
     if( inst->sourcetype == "264" )
     {
         H264Demux_CLose(inst->framer_handle);
+    }
+    else if( inst->sourcetype == "aac" )
+    {
+        AACDemux_CLose(inst->framer_handle);
     }
 
     if( inst )

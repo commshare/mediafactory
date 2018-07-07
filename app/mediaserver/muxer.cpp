@@ -4,6 +4,7 @@
 
 #include "muxer.h"
 #include "../../protocol/librtp/rtph264.h"
+#include "../../protocol/librtp/rtpaac.h"
 
 struct muxer_tag_t
 {
@@ -19,9 +20,13 @@ void* muxer_alloc(const char* sourcetype)
 {
     std::string temp = sourcetype;
      void* muxer_handle = NULL;
-     if( temp == "264" )
+    if( temp == "264" )
     {
         muxer_handle = rtpmux_h264_alloc(1);
+    }
+    else if( temp == "aac" )
+    {
+        muxer_handle = rtpmux_aac_alloc(1);
     }
 
     if( !muxer_handle )
@@ -44,6 +49,10 @@ int muxer_setframe(void* handle, const char* h264frame, int framelength)
     {
         return rtpmux_h264_setframe(inst->muxer_handle, h264frame, framelength);
     }
+    else if( inst->sourcetype == "aac" )
+    {
+        return rtpmux_aac_setframe(inst->muxer_handle, h264frame, framelength);
+    }
 
     return -1;
 }
@@ -57,6 +66,10 @@ int muxer_getpacket(void* handle, const char** rtp_buffer,
     {
         return rtpmux_h264_getpacket(inst->muxer_handle, rtp_buffer, rtp_packet_length, last_rtp_packet_length, rtp_packet_count);
     }
+    else if( inst->sourcetype == "aac" )
+    {
+        return rtpmux_aac_getpacket(inst->muxer_handle, rtp_buffer, rtp_packet_length, last_rtp_packet_length, rtp_packet_count);
+    }
 
     return -1;
 }
@@ -67,6 +80,10 @@ int muxer_free(void *handle)
     if( inst->sourcetype == "264" && inst->muxer_handle )
     {
         rtpmux_h264_free(inst->muxer_handle);
+    }
+    else if( inst->sourcetype == "aac" && inst->muxer_handle )
+    {
+        rtpmux_aac_free(inst->muxer_handle);
     }
     delete inst;
 
