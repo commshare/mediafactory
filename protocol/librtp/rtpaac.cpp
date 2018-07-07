@@ -49,8 +49,56 @@ typedef struct {
 } FU_HEADER; /**//* 1 BYTES */        
 #pragma pack(pop)
 
+int get_local_rtp_rtcp_port(int *rtp_sock, int *rtp_port, int *rtcp_sock, int *rtcp_port)
+{
+    for( int i = 11000;i<30000;i+=2)
+    {
+        int rtpsock = socket(PF_INET, SOCK_DGRAM, 0);
+        if( rtpsock < 0 ) 
+        {
+          printf("socket error");
+          return -1;
+        }
+
+        struct sockaddr_in lcl_addr;
+        bzero(&lcl_addr,sizeof(lcl_addr));
+        lcl_addr.sin_family = AF_INET;
+        lcl_addr.sin_addr.s_addr = htons(INADDR_ANY);
+        lcl_addr.sin_port = htons(i);
+        if (bind(rtpsock, (struct sockaddr *)&lcl_addr, sizeof(lcl_addr)) < 0) 
+        {
+            printf("bind error");
+            close(rtpsock);
+            continue;
+        }
+        *rtp_sock = rtpsock;
+        *rtp_port = i;
+
+        int rtcpsock = socket(PF_INET, SOCK_DGRAM, 0);
+        if( rtcpsock < 0 ) 
+        {
+          printf("socket error");
+          return -1;
+        }
+
+        lcl_addr.sin_port = htons(i+1);
+        if (bind(rtcpsock, (struct sockaddr *)&lcl_addr, sizeof(lcl_addr)) < 0) 
+        {
+            printf("bind error");
+            close(rtcpsock);
+            close(rtpsock);
+            continue;
+        }
+        *rtcp_sock = rtcpsock;
+        *rtcp_port = i+1;
+
+        break;
+    }
+
+    return 0;
+}
 ////////////////////////////////////////////////////////
-void* rtpmux_h264_alloc(unsigned long ssrc)
+void* rtp_mux_init(unsigned long ssrc)
 {
     rtp_h264_mux_desc_t* handle = new rtp_h264_mux_desc_t;
     handle->packet_length = sizeof(RTP_FIXED_HEADER) + sizeof(FU_INDICATOR) + sizeof(FU_HEADER) + MAX_RTP_BODY_LENGTH;//1460;
@@ -63,7 +111,7 @@ void* rtpmux_h264_alloc(unsigned long ssrc)
     return (void*)handle;
 }
 
-int rtpmux_h264_setframe(void* handle, const char* frame_buffer, int frame_length)
+int rtp_set_h264_frame(void* handle, const char* frame_buffer, int frame_length)
 {
     rtp_h264_mux_desc_t* rtp_mux = (rtp_h264_mux_desc_t*)handle;
     rtp_mux->rtp_buffer.clear();
@@ -172,7 +220,7 @@ int rtpmux_h264_setframe(void* handle, const char* frame_buffer, int frame_lengt
     return 0;    
 }
 
-int rtpmux_h264_getpacket(void* handle, const char **rtp_buffer, int *rtp_packet_length,
+int rtp_get_h264_packet(void* handle, const char **rtp_buffer, int *rtp_packet_length,
             int *rtp_last_packet_length, int *rtp_packet_count)
 {
     rtp_h264_mux_desc_t* rtp_mux = (rtp_h264_mux_desc_t*)handle;
@@ -184,7 +232,7 @@ int rtpmux_h264_getpacket(void* handle, const char **rtp_buffer, int *rtp_packet
     return 0;
 }
 
-int rtpmux_h264_free(void* handle)
+int rtp_mux_close(void* handle)
 {
     rtp_h264_mux_desc_t* rtp_mux = (rtp_h264_mux_desc_t*)handle;
     delete rtp_mux;

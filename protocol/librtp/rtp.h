@@ -24,4 +24,6 @@ typedef struct
 } RTP_FIXED_HEADER;  
 #pragma pack(pop)
 
+int get_local_rtp_rtcp_port(int *rtp_sock, int *rtp_port, int *rtcp_sock, int *rtcp_port);
+
 #endif

@@ -83,7 +83,7 @@ void* tcpmediaproc(void *arg)
     ri.channel = 0;
 
     ////////////////////////////////////////////////
-    void* rtphandle = rtp_mux_init(1);
+    void* rtphandle = rtpmux_h264_alloc(1);
 
     printf("session->sourcename = %s \n", session->sourcename.c_str());
     void *framerhandle = framer_alloc(session->sourcename.c_str());
@@ -99,11 +99,11 @@ void* tcpmediaproc(void *arg)
             break;
         }
 
-        rtp_set_h264_frame(rtphandle, h264frame, framelength);
+        rtpmux_h264_setframe(rtphandle, h264frame, framelength);
 
         const char* rtp_buffer = NULL;
         int rtp_packet_length, last_rtp_packet_length, rtp_packet_count;
-        rtp_get_h264_packet(rtphandle, &rtp_buffer, &rtp_packet_length, &last_rtp_packet_length, &rtp_packet_count);
+        rtpmux_h264_getpacket(rtphandle, &rtp_buffer, &rtp_packet_length, &last_rtp_packet_length, &rtp_packet_count);
 
         for( int i = 0;i < rtp_packet_count;i++ )
         {
@@ -134,7 +134,7 @@ void* tcpmediaproc(void *arg)
         usleep(1000 * 40);//1000);
     }
 
-    rtp_mux_close(rtphandle);
+    rtpmux_h264_free(rtphandle);
     framer_free(framerhandle);
     tcp_server_close(tcpserverhandle, client_fd);
     printf("tcpmediaproc exit \n");
@@ -155,7 +155,7 @@ void* udpmediaproc(void *arg)
     }
 
     ////////////////////////////////////////////////
-    void* rtphandle = rtp_mux_init(1);
+    void* rtphandle = rtpmux_h264_alloc(1);
     void *framerhandle = framer_alloc(session->sourcename.c_str());
 
     while( 1 )
@@ -169,11 +169,11 @@ void* udpmediaproc(void *arg)
             break;
         }
 
-        rtp_set_h264_frame(rtphandle, h264frame, framelength);
+        rtpmux_h264_setframe(rtphandle, h264frame, framelength);
 
         const char* rtp_buffer = NULL;
         int rtp_packet_length, last_rtp_packet_length, rtp_packet_count;
-        rtp_get_h264_packet(rtphandle, &rtp_buffer, &rtp_packet_length, &last_rtp_packet_length, &rtp_packet_count);
+        rtpmux_h264_getpacket(rtphandle, &rtp_buffer, &rtp_packet_length, &last_rtp_packet_length, &rtp_packet_count);
 
         for( int i = 0;i < rtp_packet_count;i++ )
         {
@@ -198,7 +198,7 @@ void* udpmediaproc(void *arg)
     }
   
     udp_client_free(udphandle);
-      rtp_mux_close(rtphandle);
+    rtpmux_h264_free(rtphandle);
     framer_free(framerhandle);
     printf("udpmediaproc exit \n");
     return NULL;
