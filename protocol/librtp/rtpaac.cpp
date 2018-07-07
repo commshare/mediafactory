@@ -61,8 +61,8 @@ int rtpmux_aac_setframe(void* handle, const char* frame_buffer, int frame_length
     rtp_hdr.version     = 2;  //版本号，此版本固定为2  
     rtp_hdr.ssrc     = htonl(rtp_mux->rtp_ssrc);    //随机指定为10，并且在本RTP会话中全局唯一  
     
-    AU_HEADER auheaer;
-    auheaer.headerlength = htons(0x10);//header length is fixed as 16bit
+    AU_HEADER auheader;
+    auheader.headerlength = htons(0x10);//header length is fixed as 16bit
 
     frame_length -= 7;
     frame_buffer += 7;
@@ -78,15 +78,15 @@ int rtpmux_aac_setframe(void* handle, const char* frame_buffer, int frame_length
 
         rtp_mux->rtp_buffer.append((char*)&rtp_hdr, sizeof(rtp_hdr));
 
-        auheaer.payloadlength = htons(frame_length << 3);
-        rtp_mux->rtp_buffer.append((char*)&auheaer, sizeof(auheaer));
+        auheader.payloadlength = htons(frame_length << 3);
+        rtp_mux->rtp_buffer.append((char*)&auheader, sizeof(auheader));
 
 //        printf("sizeof(rtp_hdr)=%d %d \n", sizeof(rtp_hdr), rtp_mux->rtp_buffer.size());
         //NAL单元的第一字节和RTP荷载头第一个字节重合
         rtp_mux->rtp_buffer.append(frame_buffer, frame_length);
 
         rtp_mux->packet_count = 1;
-        rtp_mux->last_packet_length = frame_length + sizeof(rtp_hdr) + sizeof(auheaer);
+        rtp_mux->last_packet_length = frame_length + sizeof(rtp_hdr) + sizeof(auheader);
     }
     else
     {
@@ -103,11 +103,11 @@ int rtpmux_aac_setframe(void* handle, const char* frame_buffer, int frame_length
                 rtp_hdr.marker = 1;  
                 rtp_mux->rtp_buffer.append((char*)&rtp_hdr, sizeof(rtp_hdr));
 
-                auheaer.payloadlength = htons(frame_length<<3);
-                rtp_mux->rtp_buffer.append((char*)&auheaer, sizeof(auheaer));
+                auheader.payloadlength = htons(frame_length<<3);
+                rtp_mux->rtp_buffer.append((char*)&auheader, sizeof(auheader));
 
                 rtp_mux->rtp_buffer.append(frame_buffer, frame_length);
-                rtp_mux->last_packet_length = sizeof(rtp_hdr) + sizeof(auheaer) + frame_length;
+                rtp_mux->last_packet_length = sizeof(rtp_hdr) + sizeof(auheader) + frame_length;
             }  
             //既不是第一个分片，也不是最后一个分片的处理。  
             else if(frame_length > MAX_RTP_BODY_LENGTH)  
@@ -116,8 +116,8 @@ int rtpmux_aac_setframe(void* handle, const char* frame_buffer, int frame_length
                 rtp_hdr.marker = 0;  
                 rtp_mux->rtp_buffer.append((char*)&rtp_hdr, sizeof(rtp_hdr));
 
-                auheaer.payloadlength = htons(MAX_RTP_BODY_LENGTH<<3);
-                rtp_mux->rtp_buffer.append((char*)&auheaer, sizeof(auheaer));
+                auheader.payloadlength = htons(MAX_RTP_BODY_LENGTH<<3);
+                rtp_mux->rtp_buffer.append((char*)&auheader, sizeof(auheader));
 
                 rtp_mux->rtp_buffer.append(frame_buffer, MAX_RTP_BODY_LENGTH);
             }  
