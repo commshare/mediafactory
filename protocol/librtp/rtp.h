@@ -3,6 +3,7 @@
              
 #define MAX_RTP_BODY_LENGTH     1440    
 #define H264                    96  
+#define AAC                    97  
 
 #pragma pack(push,1)
 typedef struct   

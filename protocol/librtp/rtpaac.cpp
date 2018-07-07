@@ -30,7 +30,8 @@ typedef struct
 typedef struct {  
     //byte 0  
     uint16_t headerlength;
-    uint16_t payloadlength;//high 13bit is payloadlength, low 3bit is 0
+    uint8_t payloadlength;//high 13bit is payloadlength, low 3bit is 0
+    uint8_t payloadlength2;
 } AU_HEADER; /**//* 1 BYTES */  
 
 #pragma pack(pop)
@@ -57,7 +58,7 @@ int rtpmux_aac_setframe(void* handle, const char* frame_buffer, int frame_length
    //设置RTP HEADER，  
     RTP_FIXED_HEADER rtp_hdr;      
     memset(&rtp_hdr,0,sizeof(rtp_hdr));  
-    rtp_hdr.payload     = H264;  //负载类型号，  
+    rtp_hdr.payload     = AAC;  //负载类型号，  
     rtp_hdr.version     = 2;  //版本号，此版本固定为2  
     rtp_hdr.ssrc     = htonl(rtp_mux->rtp_ssrc);    //随机指定为10，并且在本RTP会话中全局唯一  
     
@@ -75,9 +76,15 @@ int rtpmux_aac_setframe(void* handle, const char* frame_buffer, int frame_length
         rtp_mux->timestamp_current += rtp_mux->timestamp_increse;  
 
         rtp_mux->rtp_buffer.append((char*)&rtp_hdr, sizeof(rtp_hdr));
+        char p[4] = {0};
+        p[0] = 0x0;
+        p[1] = 0x10;
+        p[2] = (frame_length & 0xff) >> 3;
+        p[3] = (frame_length & 0xff) << 5;
 
         auheaer.payloadlength = frame_length;//frame_length<<3;
-        rtp_mux->rtp_buffer.append((char*)&auheaer, sizeof(auheaer));
+//        rtp_mux->rtp_buffer.append((char*)&auheaer, sizeof(auheaer));
+        rtp_mux->rtp_buffer.append((char*)p, sizeof(auheaer));
 //        printf("sizeof(rtp_hdr)=%d %d \n", sizeof(rtp_hdr), rtp_mux->rtp_buffer.size());
         //NAL单元的第一字节和RTP荷载头第一个字节重合
         rtp_mux->rtp_buffer.append(frame_buffer, frame_length);
@@ -100,7 +107,7 @@ int rtpmux_aac_setframe(void* handle, const char* frame_buffer, int frame_length
                 rtp_hdr.marker = 1;  
                 rtp_mux->rtp_buffer.append((char*)&rtp_hdr, sizeof(rtp_hdr));
 
-                auheaer.payloadlength = (frame_length*8)<<3;
+                auheaer.payloadlength = htons(frame_length);
                 rtp_mux->rtp_buffer.append((char*)&auheaer, sizeof(auheaer));
 
                 rtp_mux->rtp_buffer.append(frame_buffer, frame_length);
