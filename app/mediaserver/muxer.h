@@ -1,10 +1,10 @@
-#ifndef __FRAMER_H__
-#define __FRAMER_H__
+#ifndef __MUXER_H__
+#define __MUXER_H__
 
-void* framer_alloc(const char* sourcename);
+void* muxer_alloc(const char* sourcename);
 
-int framer_getframe(void* handle, const char** frame, int *length);
+int muxer_getframe(void* handle, const char** frame, int *length);
 
-int framer_free(void *handle);
+int muxer_free(void *handle);
 
 #endif

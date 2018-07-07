@@ -119,6 +119,11 @@ int demuxer_getframe(void* handle, const char** frame, int *length)
 int demuxer_free(void *handle)
 {
     demuxer_tag_t *inst = (demuxer_tag_t*)handle;
+    if( inst->sourcetype == "264" )
+    {
+        H264Demux_CLose(inst->framer_handle);
+    }
+
     if( inst )
         delete inst;
 
