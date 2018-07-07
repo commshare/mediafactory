@@ -120,7 +120,7 @@ int rtpmux_aac_setframe(void* handle, const char* frame_buffer, int frame_length
                 rtp_mux->rtp_buffer.append((char*)&auheader, sizeof(auheader));
 
                 rtp_mux->rtp_buffer.append(frame_buffer, MAX_RTP_BODY_LENGTH);
-            }  
+            }
 
             rtp_mux->packet_count++;
             frame_length -= MAX_RTP_BODY_LENGTH;
