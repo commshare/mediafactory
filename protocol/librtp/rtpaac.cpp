@@ -76,7 +76,7 @@ int rtpmux_aac_setframe(void* handle, const char* frame_buffer, int frame_length
 
         rtp_mux->rtp_buffer.append((char*)&rtp_hdr, sizeof(rtp_hdr));
 
-        auheaer.payloadlength = frame_length<<3;
+        auheaer.payloadlength = frame_length;//frame_length<<3;
         rtp_mux->rtp_buffer.append((char*)&auheaer, sizeof(auheaer));
 //        printf("sizeof(rtp_hdr)=%d %d \n", sizeof(rtp_hdr), rtp_mux->rtp_buffer.size());
         //NAL单元的第一字节和RTP荷载头第一个字节重合
@@ -100,7 +100,7 @@ int rtpmux_aac_setframe(void* handle, const char* frame_buffer, int frame_length
                 rtp_hdr.marker = 1;  
                 rtp_mux->rtp_buffer.append((char*)&rtp_hdr, sizeof(rtp_hdr));
 
-                auheaer.payloadlength = frame_length<<3;
+                auheaer.payloadlength = (frame_length*8)<<3;
                 rtp_mux->rtp_buffer.append((char*)&auheaer, sizeof(auheaer));
 
                 rtp_mux->rtp_buffer.append(frame_buffer, frame_length);
