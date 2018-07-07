@@ -68,7 +68,7 @@ int rtpmux_aac_setframe(void* handle, const char* frame_buffer, int frame_length
     frame_buffer += 7;
     //  当一个NALU小于1400字节的时候，采用一个单RTP包发送  
     if(frame_length <= MAX_RTP_BODY_LENGTH)  
-    {     
+    {
         //设置rtp M 位；  
         rtp_hdr.marker = 1;  
         rtp_hdr.seq_no  = htons(rtp_mux->sequence_number++); //序列号，每发送一个RTP包增1，htons，将主机字节序转成网络字节序。  
@@ -77,14 +77,8 @@ int rtpmux_aac_setframe(void* handle, const char* frame_buffer, int frame_length
         rtp_mux->timestamp_current += rtp_mux->timestamp_increse;  
 
         rtp_mux->rtp_buffer.append((char*)&rtp_hdr, sizeof(rtp_hdr));
-        char p[4] = {0};
-        p[0] = 0x0;
-        p[1] = 0x10;
-        p[2] = (frame_length & 0xff) >> 3;
-        p[3] = (frame_length & 0xff) << 5;
 
         auheaer.payloadlength = htons(frame_length << 3);
-//        auheaer.payloadlength = htons(auheaer.payloadlength<<3);
         rtp_mux->rtp_buffer.append((char*)&auheaer, sizeof(auheaer));
 
 //        printf("sizeof(rtp_hdr)=%d %d \n", sizeof(rtp_hdr), rtp_mux->rtp_buffer.size());
@@ -109,7 +103,7 @@ int rtpmux_aac_setframe(void* handle, const char* frame_buffer, int frame_length
                 rtp_hdr.marker = 1;  
                 rtp_mux->rtp_buffer.append((char*)&rtp_hdr, sizeof(rtp_hdr));
 
-                auheaer.payloadlength = htons(frame_length);
+                auheaer.payloadlength = htons(frame_length<<3);
                 rtp_mux->rtp_buffer.append((char*)&auheaer, sizeof(auheaer));
 
                 rtp_mux->rtp_buffer.append(frame_buffer, frame_length);
@@ -122,7 +116,7 @@ int rtpmux_aac_setframe(void* handle, const char* frame_buffer, int frame_length
                 rtp_hdr.marker = 0;  
                 rtp_mux->rtp_buffer.append((char*)&rtp_hdr, sizeof(rtp_hdr));
 
-                auheaer.payloadlength = MAX_RTP_BODY_LENGTH<<3;
+                auheaer.payloadlength = htons(MAX_RTP_BODY_LENGTH<<3);
                 rtp_mux->rtp_buffer.append((char*)&auheaer, sizeof(auheaer));
 
                 rtp_mux->rtp_buffer.append(frame_buffer, MAX_RTP_BODY_LENGTH);
