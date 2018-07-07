@@ -41,7 +41,7 @@
 #include "../../protocol/librtp/rtph264.h"
 #include "../../file/libh26x/h264demux.h"
 #include "rtspserver.h"
-#include "framer.h"
+#include "demuxer.h"
 
 #include "../../transport/tcp/tcpserver.h"
 #include "../../transport/udp/udpclient.h"
@@ -86,13 +86,13 @@ void* tcpmediaproc(void *arg)
     void* rtphandle = rtpmux_h264_alloc(1);
 
     printf("session->sourcename = %s \n", session->sourcename.c_str());
-    void *framerhandle = framer_alloc(session->sourcename.c_str());
+    void *framerhandle = demuxer_alloc(session->sourcename.c_str());
 
     while( 1 )
     {
         const char *h264frame = NULL;
         int framelength = -1;
-        int ret = framer_getframe(framerhandle, &h264frame, &framelength);
+        int ret = demuxer_getframe(framerhandle, &h264frame, &framelength);
         if( ret < 0 )
         {
             printf("framer_getframe error\n");
@@ -135,7 +135,7 @@ void* tcpmediaproc(void *arg)
     }
 
     rtpmux_h264_free(rtphandle);
-    framer_free(framerhandle);
+    demuxer_free(framerhandle);
     tcp_server_close(tcpserverhandle, client_fd);
     printf("tcpmediaproc exit \n");
     return NULL;
@@ -156,13 +156,13 @@ void* udpmediaproc(void *arg)
 
     ////////////////////////////////////////////////
     void* rtphandle = rtpmux_h264_alloc(1);
-    void *framerhandle = framer_alloc(session->sourcename.c_str());
+    void *framerhandle = demuxer_alloc(session->sourcename.c_str());
 
     while( 1 )
     {
         const char *h264frame = NULL;
         int framelength = -1;
-        int ret = framer_getframe(framerhandle, &h264frame, &framelength);
+        int ret = demuxer_getframe(framerhandle, &h264frame, &framelength);
         if( ret < 0 )
         {
             printf("framer_getframe error\n");
@@ -199,7 +199,7 @@ void* udpmediaproc(void *arg)
   
     udp_client_free(udphandle);
     rtpmux_h264_free(rtphandle);
-    framer_free(framerhandle);
+    demuxer_free(framerhandle);
     printf("udpmediaproc exit \n");
     return NULL;
 }
