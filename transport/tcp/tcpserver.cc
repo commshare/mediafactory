@@ -264,7 +264,7 @@ int tcp_server_read(void* handle, int clientid, char* data, int length)
     {  
 //        printf("tcp_server_read ret = %d \n", ret);
         //no data received
-        if( errno == EAGAIN )
+        if( errno == EAGAIN || errno == EINTR )
             return 0;
 
         perror("tcp_server_read error:");  
@@ -311,7 +311,7 @@ int tcp_server_write(void* handle, int clientid, const char* data, int length)
 //    printf("writelen=%d, length=%d \n", writelen, length);
     while( ret <= 0 )
     {  
-        if( errno != EAGAIN )
+        if( errno != EAGAIN && errno != EINTR )
         {
             perror("tcp_server_write error:");  
             return -1;  
@@ -323,8 +323,6 @@ int tcp_server_write(void* handle, int clientid, const char* data, int length)
         }
 
         ret = write(clientid, data, length);
-        if( errno == EAGAIN )
-            continue;
     }
     return ret;
 
