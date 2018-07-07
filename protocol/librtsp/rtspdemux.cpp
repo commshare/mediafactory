@@ -48,18 +48,28 @@ std::string getResponse_OPTIONS(int errorCode, const char *server, std::string &
     return strResponse;
 }
 
-std::string getResponse_DESCRIBE(std::string &seq)
+std::string getResponse_DESCRIBE(std::string &streamtype, std::string &seq)
 {
     std::string headers = "RTSP/1.0 200 OK\r\n" \
                         "Cseq: " + seq + " \r\n" \
                         "Content-Type: application/sdp \r\n";
     
-    std::string strSDP = "v=0\r\n" \
-            "m=video 0 RTP/AVP 96\r\n" \
-            "a=rtpmap:96 H264/90000\r\n" \
-//            "fmtp:96 packetization-mode=1;profile-level-id=64000D;sprop-parameter-sets=Z2QADaw06BQfoQAAAwABAAADADKPFCqg,aO4BLyw=\r\n" \
+    std::string strSDP;
+    if( streamtype == "264" )    
+        strSDP = "v=0\r\n" \
+                "m=video 0 RTP/AVP 96\r\n" \
+                "a=rtpmap:96 H264/90000\r\n" \
+    //            "fmtp:96 packetization-mode=1;profile-level-id=64000D;sprop-parameter-sets=Z2QADaw06BQfoQAAAwABAAADADKPFCqg,aO4BLyw=\r\n" \
 
-            "c=IN IP4 0.0.0.0";
+                "c=IN IP4 0.0.0.0";
+    else if( streamtype == "264" )    
+        strSDP = "v=0\r\n" \
+                "m=audio  0 RTP/AVP 96\r\n" \
+                "a=rtpmap:96 mpeg4-generic/44100\r\n" \
+    //            "fmtp:96 packetization-mode=1;profile-level-id=64000D;sprop-parameter-sets=Z2QADaw06BQfoQAAAwABAAADADKPFCqg,aO4BLyw=\r\n" \
+
+                "c=IN IP4 0.0.0.0";
+
     strSDP += "\r\n";
 
     headers += "Content-length: ";
@@ -228,7 +238,7 @@ int rtsp_demux_parse(void* handle, const char* request, const char** response, i
     }
     else if( method == "DESCRIBE" )
     {
-        rtsp_demux->response = getResponse_DESCRIBE(strCSeq);
+        rtsp_demux->response = getResponse_DESCRIBE(rtsp_demux->filenameext, strCSeq);
     }
     else if( method == "SETUP" )
     {
