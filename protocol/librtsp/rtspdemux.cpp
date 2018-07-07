@@ -62,7 +62,7 @@ std::string getResponse_DESCRIBE(std::string &streamtype, std::string &seq)
     //            "fmtp:96 packetization-mode=1;profile-level-id=64000D;sprop-parameter-sets=Z2QADaw06BQfoQAAAwABAAADADKPFCqg,aO4BLyw=\r\n" \
 
                 "c=IN IP4 0.0.0.0";
-    else if( streamtype == "264" )    
+    else if( streamtype == "aac" )    
         strSDP = "v=0\r\n" \
                 "m=audio  0 RTP/AVP 96\r\n" \
                 "a=rtpmap:96 mpeg4-generic/44100\r\n" \
