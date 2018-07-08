@@ -15,7 +15,7 @@ OBJS = ../../protocol/librtp/rtph264.o \
 		muxer.o \
 		main.o
 
-CXXFLAGS = -g -W -Wall -O2 -g -std=c++11 -lpthread -Ithirdparty/lib/libst
+CXXFLAGS = -g -W -Wall -std=c++11 -lpthread -Ithirdparty/lib/libst
 LIBS = thirdparty/lib/libst/libst.a -lstdc++
 
 service: $(OBJS)
