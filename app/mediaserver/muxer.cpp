@@ -58,9 +58,13 @@ int muxer_setframe(void* handle, const char* h264frame, int framelength)
     {
         return rtpmux_aac_setframe(inst->muxer_handle, h264frame, framelength);
     }
-    else if( inst->sourcetype == "alaw" || inst->sourcetype == "mulaw" )
+    else if( inst->sourcetype == "alaw" )
     {
-        return rtpmux_raw_setframe(inst->muxer_handle, h264frame, framelength);
+        return rtpmux_raw_setframe(inst->muxer_handle, PCMA, h264frame, framelength);
+    }
+    else if( inst->sourcetype == "mulaw" )
+    {
+        return rtpmux_raw_setframe(inst->muxer_handle, PCMU, h264frame, framelength);
     }
 
     return -1;
