@@ -106,6 +106,7 @@ void* tcpmediaproc(void *arg)
         int rtp_packet_length, last_rtp_packet_length, rtp_packet_count;
         muxer_getpacket(muxerhandle, &rtp_buffer, &rtp_packet_length, &last_rtp_packet_length, &rtp_packet_count);
 
+        printf("framelength=%d rtp_packet_count=%d \n", framelength, rtp_packet_count);
         for( int i = 0;i < rtp_packet_count;i++ )
         {
             if( i == rtp_packet_count - 1)

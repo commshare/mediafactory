@@ -47,7 +47,7 @@ int rtpmux_raw_setframe(void* handle, const char* frame_buffer, int frame_length
    //设置RTP HEADER，  
     RTP_FIXED_HEADER rtp_hdr;      
     memset(&rtp_hdr,0,sizeof(rtp_hdr));  
-    rtp_hdr.payload     = AAC;  //负载类型号，  
+    rtp_hdr.payload     = PCMU;  //负载类型号，  
     rtp_hdr.version     = 2;  //版本号，此版本固定为2  
     rtp_hdr.ssrc     = htonl(rtp_mux->rtp_ssrc);    //随机指定为10，并且在本RTP会话中全局唯一  
     
