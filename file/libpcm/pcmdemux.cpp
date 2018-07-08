@@ -19,6 +19,7 @@ typedef struct {
 
     int circleread;
     uint32_t defaultframelength;
+    PCMType pcmType;
 }PCMFileDesc_t;
 
 static int pcm_sample_rates[16] =
@@ -106,7 +107,7 @@ int _PCMGetFrame(void* handle, const char **frame, int *length)
 
 ///////////////////////////////////////////////////////////
 void* PCMDemux_Init(const char* filepath, uint32_t bitcount, uint32_t channelcount,
-    uint32_t samplerate, int circleread)
+    uint32_t samplerate, PCMType pcmtype, int circleread)
 {
     int i = 0, _samplerate = -1;
     for(;i< 16; i++)
@@ -129,12 +130,18 @@ void* PCMDemux_Init(const char* filepath, uint32_t bitcount, uint32_t channelcou
         return NULL;
     }
 
+    desc->pcmType = pcmtype;
     desc->circleread = circleread;
-    desc->defaultframelength = 4096;
     desc->config.channelcount = channelcount;
     desc->config.bitcount = bitcount;
     desc->config.samplerate = samplerate;
     desc->config.profilelevel = 2;
+
+    uint32_t framerate = 25;
+    uint32_t pcmFrameLength = samplerate * (bitcount / 8) * channelcount / framerate;
+    if( pcmtype == PCM_G711A || pcmtype == PCM_G711U )
+        pcmFrameLength /= 2;
+    desc->defaultframelength = pcmFrameLength;//4096;
 
     return desc;
 }

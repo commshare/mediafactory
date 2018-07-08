@@ -13,8 +13,15 @@ typedef struct {
     uint32_t bitcount;    
 }PCMConfiguration_t;
 
+enum PCMType
+{
+	PCM_G711U = 0,
+	PCM_G711A = 8,
+	PCM_G729 = 18
+};
+
 void* PCMDemux_Init(const char* filepath, uint32_t bitcount, uint32_t channelcount,
-	uint32_t samplerate, int circleread);
+	uint32_t samplerate, PCMType pcmtype, int circleread);
 
 int PCMDemux_GetConfig(void *handle, PCMConfiguration_t *config);
 

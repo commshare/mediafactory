@@ -96,9 +96,13 @@ void* demuxer_alloc(const char* sourcename)
     {
         framer_handle = AACDemux_Init(sourcename, 1);
     }
-    else if( sourcetype == "alaw" || sourcetype == "mulaw" )
+    else if( sourcetype == "alaw" )
     {
-        framer_handle = PCMDemux_Init(sourcename, 1, 1, 44100, 1);
+        framer_handle = PCMDemux_Init(sourcename, 16, 2, 44100, PCM_G711A, 1);
+    }
+    else if( sourcetype == "mulaw" )
+    {
+        framer_handle = PCMDemux_Init(sourcename, 16, 2, 44100, PCM_G711U, 1);
     }
 
     if( !framer_handle )
