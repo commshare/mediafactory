@@ -51,7 +51,7 @@ static void SegvHandler(int signum) {
     size_t size = backtrace (array, ARRAY_SIZE);
     char **strings = (char **)backtrace_symbols (array, size);
 
-    fprintf(stderr, "SegvHandler received SIGSEGV! Stack trace:\n");
+    fprintf(stderr, "SegvHandler received SIGSEGV! Stack trace, signum:%d \n", signum);
     for (size_t i = 0; i < size; i++) {
         fprintf(stderr, "%d %s \n",i,strings[i]);
     }
@@ -64,6 +64,31 @@ int main()
 {
     signal(SIGSEGV, SegvHandler); // SIGSEGV      11       Core    Invalid memory reference
     signal(SIGABRT, SegvHandler); // SIGABRT       6       Core    Abort signal from
+
+    signal(SIGHUP, SegvHandler);
+    signal(SIGINT, SegvHandler);
+    signal(SIGQUIT, SegvHandler);
+    signal(SIGILL, SegvHandler);
+    signal(SIGTRAP, SegvHandler);
+    signal(SIGBUS, SegvHandler);
+    signal(SIGFPE, SegvHandler);
+    signal(SIGKILL, SegvHandler);
+    signal(SIGUSR1, SegvHandler);
+    signal(SIGUSR1, SegvHandler);
+    signal(SIGUSR2, SegvHandler);
+    signal(SIGPIPE, SegvHandler);
+    signal(SIGALRM, SegvHandler);
+    signal(SIGTERM, SegvHandler);
+    signal(SIGSTKFLT, SegvHandler);
+    signal(SIGXCPU, SegvHandler);
+    signal(SIGXFSZ, SegvHandler);
+    signal(SIGVTALRM, SegvHandler);
+    signal(SIGPROF, SegvHandler);
+    signal(SIGIO, SegvHandler);
+    signal(SIGPWR, SegvHandler);
+    signal(SIGSYS, SegvHandler);
+    for( int i = SIGRTMIN;i <= SIGRTMAX;i++)
+        signal(i, SegvHandler);
 
     void* handle = rtspserv(554);
 
