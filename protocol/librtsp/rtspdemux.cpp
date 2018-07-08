@@ -73,7 +73,7 @@ std::string getResponse_DESCRIBE(std::string &streamtype, std::string &seq)
     else if( streamtype == "alaw" )    
         strSDP = "v=0\r\n" \
                 "m=audio  0 RTP/AVP 8\r\n" \
-                "a=rtpmap:8 pcma/8000/1\r\n" \
+                "a=rtpmap:8 pcma/44100/2\r\n" \
                 "a=framerate:25\r\n" \
                 "c=IN IP4 0.0.0.0";
     else if( streamtype == "mulaw" )    
