@@ -5,6 +5,7 @@
 #include "demuxer.h"
 #include "../../file/libh26x/h264demux.h"
 #include "../../file/libaac/aacdemux.h"
+#include "../../file/libpcm/pcmdemux.h"
 
 struct demuxer_tag_t
 {
@@ -95,6 +96,10 @@ void* demuxer_alloc(const char* sourcename)
     {
         framer_handle = AACDemux_Init(sourcename, 1);
     }
+    else if( sourcetype == "alaw" || sourcetype == "mulaw" )
+    {
+        framer_handle = PCMDemux_Init(sourcename, 1, 1, 44100, 1);
+    }
 
     if( !framer_handle )
     {
@@ -121,6 +126,10 @@ int demuxer_getframe(void* handle, const char** frame, int *length)
     {
         return AACDemux_GetFrame(inst->framer_handle, frame, length);
     }
+    else if( inst->sourcetype == "alaw" || inst->sourcetype == "mulaw" )
+    {
+        return PCMDemux_GetFrame(inst->framer_handle, frame, length);        
+    }
 
     return 0;
 }
@@ -135,6 +144,10 @@ int demuxer_free(void *handle)
     else if( inst->sourcetype == "aac" )
     {
         AACDemux_CLose(inst->framer_handle);
+    }
+    else if( inst->sourcetype == "alaw" || inst->sourcetype == "mulaw" )
+    {
+        PCMDemux_CLose(inst->framer_handle);        
     }
 
     if( inst )

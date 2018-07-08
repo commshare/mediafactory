@@ -70,13 +70,13 @@ std::string getResponse_DESCRIBE(std::string &streamtype, std::string &seq)
 //                "a=fmtp:97 profile-level-id=15; config=1310;streamtype=5; ObjectType=64; mode=AAC-hbr; SizeLength=13; IndexLength=3;IndexDeltaLength=3" \
 
                 "c=IN IP4 0.0.0.0";
-    else if( streamtype == "g711a" )    
+    else if( streamtype == "alaw" )    
         strSDP = "v=0\r\n" \
                 "m=audio  0 RTP/AVP 8\r\n" \
                 "a=rtpmap:8 pcma/8000/1\r\n" \
                 "a=framerate:25\r\n" \
                 "c=IN IP4 0.0.0.0";
-    else if( streamtype == "g711u" )    
+    else if( streamtype == "mulaw" )    
         strSDP = "v=0\r\n" \
                 "m=audio  0 RTP/AVP 0\r\n" \
                 "a=rtpmap:0 pcmu/8000/1\r\n" \
