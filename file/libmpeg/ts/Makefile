@@ -16,4 +16,4 @@ $(TARGET0):$(OBJS)
 
 clean:
 	clear
-	rm -rf $(OBJS) *.o $(TARGETS)
+	rm -rf $(OBJS) *.o $(TARGETS) *.ts

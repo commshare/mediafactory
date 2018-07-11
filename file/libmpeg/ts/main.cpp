@@ -47,7 +47,7 @@ int main()
 
 		pts += 3600;
 		
-		usleep(100 * 1000);
+		usleep(10 * 1000);
 	}
 
 	es2ts_destroy(tshandle);
