@@ -9,7 +9,7 @@ TARGETS = $(TARGET0)
 OBJS = ../../libh26x/h264demux.o ../../libh26x/spspps.o \
 		../../libaac/aacdemux.o tsmux2.o \
 		utils.o \
-		ts_test.o
+		main.o
 
 $(TARGET0):$(OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $(OBJS) $(LIBS) 
