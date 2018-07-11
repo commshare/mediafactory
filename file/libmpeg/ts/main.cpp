@@ -43,7 +43,7 @@ int main()
 		}
 		int frametype = h264frame[4]&0x1F;
 		printf("frametype %d\n", frametype);
-		es2ts_writeH264(tshandle, h264frame, framelength, frametype == 7, pts);
+		es2ts_writeH264(tshandle, h264frame, framelength, pts);
 
 		pts += 3600;
 		

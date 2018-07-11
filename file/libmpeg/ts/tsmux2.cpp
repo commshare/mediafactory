@@ -125,13 +125,6 @@ int ts_pat_header(char *buf)
     bits_write(&bits, 3, 0x07);             // reserved3和pmt_pid是一组，共有几个频道由program number指示  
     bits_write(&bits, 13, TS_PID_PMT);      // pmt of pid in ts head  
   
-/*
-    bits_write(&bits, 8, 0x2a);             // CRC_32 先暂时写死  
-    bits_write(&bits, 8, 0xb1);  
-    bits_write(&bits, 8, 0x04);  
-    bits_write(&bits, 8, 0xb2);  
-*/
-
     bits_align(&bits);  
     return bits.i_data;  
 }  
@@ -415,6 +408,7 @@ struct es2ts_t
     unsigned int pmtcounter;
     unsigned int communitycounter;
     std::fstream fsts;
+    uint32_t framecount;
 };
 
 void *es2ts_alloc(const char* filename)
@@ -422,15 +416,15 @@ void *es2ts_alloc(const char* filename)
     es2ts_t *inst = new es2ts_t();
     inst->pmtcounter = 0;
     inst->communitycounter = 0;
+    inst->framecount = 0;
     inst->fsts.open(filename, std::ios::binary | std::ios::out);
-
     return inst;
 }
 
 /* 
  *@remark: 整体发送数据的抽象逻辑处理函数接口 
  */  
-int es2ts_writeH264(void *handle, const char* framedata, int nFrameLen, int keyframe, uint64_t timestamp)
+int es2ts_writeH264(void *handle, const char* framedata, int nFrameLen, uint64_t timestamp)
 {
     es2ts_t *inst = (es2ts_t*)handle;
     if( !inst || !inst->fsts.is_open() )
@@ -440,8 +434,9 @@ int es2ts_writeH264(void *handle, const char* framedata, int nFrameLen, int keyf
     char TSFrameHdr[1024] = {0};
     int nRet = 0;
 
-    if( keyframe == 1)  
+    if( inst->framecount % 100 == 0)  
     {
+        inst->framecount = 0;
         nRet = mk_ts_pat_packet(TSFrameHdr +nSendDataOff, inst->pmtcounter);
 //        printf("mk_ts_pat_packet %d \n", nRet);
         if( nRet <= 0)      
@@ -460,7 +455,8 @@ int es2ts_writeH264(void *handle, const char* framedata, int nFrameLen, int keyf
         nSendDataOff += nRet;          
         inst->fsts.write(TSFrameHdr, nSendDataOff);
     }
-    
+    inst->framecount++;
+
     nSendDataOff = 0;
     //get first pes ts header
     nRet = mk_ts_data_packet(TSFrameHdr + nSendDataOff, nFrameLen+19, 1, 1, 1, inst->communitycounter++, timestamp);
@@ -497,7 +493,7 @@ int es2ts_writeH264(void *handle, const char* framedata, int nFrameLen, int keyf
             nRet = mk_ts_data_packet(TSFrameHdr, nFrameLen, 0, 0, 0, inst->communitycounter++, timestamp);
             nSendDataOff = nRet;
 
-            nWriteSize = TS_PACKET_SIZE - nRet;  
+            nWriteSize = TS_PACKET_SIZE - nRet;
             memcpy(TSFrameHdr + nSendDataOff,  framedata+frameoffset, nWriteSize);  
             frameoffset += nWriteSize;
 //            printf("nWriteSize %d \n", nWriteSize);
@@ -523,7 +519,7 @@ int es2ts_writeH264(void *handle, const char* framedata, int nFrameLen, int keyf
         nFrameLen -= nWriteSize;  
     }  
 
-    return 0;  
+    return 0;
 }
 
 int es2ts_destroy(void *handle)
