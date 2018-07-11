@@ -403,7 +403,7 @@ int make_pes_header(char *pData, int stream_id, int payload_len, uint64_t pts, u
 }  
 
 ///////////////////////////////////////////////////////////////////////////////////////
-struct es2ts_t 
+struct tsmux_tag_t
 {
     unsigned int pmtcounter;
     unsigned int communitycounter;
@@ -413,7 +413,7 @@ struct es2ts_t
 
 void *es2ts_alloc(const char* filename)
 {
-    es2ts_t *inst = new es2ts_t();
+    tsmux_tag_t *inst = new tsmux_tag_t();
     inst->pmtcounter = 0;
     inst->communitycounter = 0;
     inst->framecount = 0;
@@ -426,11 +426,11 @@ void *es2ts_alloc(const char* filename)
  */  
 int es2ts_writeH264(void *handle, const char* framedata, int nFrameLen, uint64_t timestamp)
 {
-    es2ts_t *inst = (es2ts_t*)handle;
+    tsmux_tag_t *inst = (tsmux_tag_t*)handle;
     if( !inst || !inst->fsts.is_open() )
         return -1;
 
-    int nSendDataOff = 0;  
+    int nSendDataOff = 0;
     char TSFrameHdr[1024] = {0};
     int nRet = 0;
 
@@ -440,17 +440,15 @@ int es2ts_writeH264(void *handle, const char* framedata, int nFrameLen, uint64_t
         nRet = mk_ts_pat_packet(TSFrameHdr +nSendDataOff, inst->pmtcounter);
 //        printf("mk_ts_pat_packet %d \n", nRet);
         if( nRet <= 0)      
-        {  
             return -1;  
-        }
+
         nSendDataOff += nRet;  
 
         nRet = mk_ts_pmt_packet(TSFrameHdr + nSendDataOff, inst->pmtcounter);      
 //        printf("mk_ts_pmt_packet %d \n", nRet);
         if( nRet <= 0)      
-        {
             return -1;  
-        }
+
         inst->pmtcounter++;
         nSendDataOff += nRet;          
         inst->fsts.write(TSFrameHdr, nSendDataOff);
@@ -524,7 +522,7 @@ int es2ts_writeH264(void *handle, const char* framedata, int nFrameLen, uint64_t
 
 int es2ts_destroy(void *handle)
 {
-    es2ts_t *inst = (es2ts_t*)handle;
+    tsmux_tag_t *inst = (tsmux_tag_t*)handle;
 
     inst->fsts.close();
     delete inst;
