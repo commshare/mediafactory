@@ -3,6 +3,7 @@
 #include <fstream>
 #include <string.h>
 #include <unistd.h>
+#include <stdint.h>
 
 #define PS_HDR_LEN  14  
 #define SYS_HDR_LEN 18  
@@ -21,12 +22,18 @@ typedef struct
     int i_data;             // 当前操作字节的位置  
     unsigned char i_mask;   // 当前操作位的掩码  
     unsigned char *p_data;  // bits buffer  
-} bits_buffer_s;  
+} BITS_BUFFER_S;
 
-/*** 
- *@remark:  讲传入的数据按地位一个一个的压入数据 
- *@param :  buffer   [in]  压入数据的buffer 
- *          count    [in]  需要压入数据占的位数 
- *          bits     [in]  压入的数值 
- */  
-void bits_write(bits_buffer_s *p_buffer, int i_count, unsigned long i_bits);
+/* remark:接口函数定义 */  
+int bits_initwrite(BITS_BUFFER_S *p_buffer, int i_size, unsigned char *p_data);
+  
+void bits_align(BITS_BUFFER_S *p_buffer);
+  
+void bits_write(BITS_BUFFER_S *p_buffer, int i_count, unsigned long i_bits);
+    
+int bits_initread(BITS_BUFFER_S *p_buffer, int i_size, unsigned char *p_data);
+  
+int bits_read(BITS_BUFFER_S *p_buffer, int i_count, unsigned long *i_bits);
+
+// CRC32
+uint32_t CRC_encode(const char* data, int len);

@@ -179,7 +179,7 @@ int mk_ts_pat_packet(char *buf, int counter)
     nOffset += nRet;  
   
     nRet = ts_writecrc(buf + nOffset, crc);
-    nOffset += nRet;  
+    nOffset += nRet;
 
     // 每一个pat都会当成一个ts包来处理，所以每次剩余部分用1来充填完  
     memset(buf + nOffset, 0xFF, TS_PACKET_SIZE - nOffset);  

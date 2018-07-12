@@ -2,7 +2,7 @@ CXX = g++
 CXXFLAGS = -g -I../../libaac -I../../libh26x
 LIBS =  -L/usr/local/lib 
 
-TARGET0 = tstest
+TARGET0 = pstest
 
 TARGETS = $(TARGET0)
 
@@ -16,4 +16,4 @@ $(TARGET0):$(OBJS)
 
 clean:
 	clear
-	rm -rf $(OBJS) *.o $(TARGETS) *.ts
+	rm -rf $(OBJS) *.o $(TARGETS) *.ps

@@ -20,12 +20,12 @@ int gb28181_make_ps_header(char *pData, unsigned long long s64Scr)
     // 这里除以100是由于sdp协议返回的video的频率是90000，帧率是25帧/s，所以每次递增的量是3600,  
     // 所以实际你应该根据你自己编码里的时间戳来处理以保证时间戳的增量为3600即可，  
     //如果这里不对的话，就可能导致卡顿现象了  
-    bits_buffer_s   bitsBuffer;  
-    bitsBuffer.i_size = PS_HDR_LEN;   
-    bitsBuffer.i_data = 0;  
+    BITS_BUFFER_S   bitsBuffer;
+    bitsBuffer.i_size = PS_HDR_LEN;
+    bitsBuffer.i_data = 0;
     bitsBuffer.i_mask = 0x80; // 二进制：10000000 这里是为了后面对一个字节的每一位进行操作，避免大小端夸字节字序错乱  
-    bitsBuffer.p_data = (unsigned char *)(pData);  
-    memset(bitsBuffer.p_data, 0, PS_HDR_LEN);  
+    bitsBuffer.p_data = (unsigned char *)(pData);
+    memset(bitsBuffer.p_data, 0, PS_HDR_LEN);
     bits_write(&bitsBuffer, 32, 0x000001BA);            /*start codes*/  
     bits_write(&bitsBuffer, 2,  1);                     /*marker bits '01b'*/  
     bits_write(&bitsBuffer, 3,  (s64Scr>>30)&0x07);     /*System clock [32..30]*/  
@@ -52,9 +52,8 @@ int gb28181_make_ps_header(char *pData, unsigned long long s64Scr)
  *@return:   0 success, others failed 
 */  
 int gb28181_make_sys_header(char *pData)  
-{  
-      
-    bits_buffer_s   bitsBuffer;  
+{
+    BITS_BUFFER_S   bitsBuffer;  
     bitsBuffer.i_size = SYS_HDR_LEN;  
     bitsBuffer.i_data = 0;  
     bitsBuffer.i_mask = 0x80;  
@@ -96,7 +95,7 @@ int gb28181_make_sys_header(char *pData)
 */  
 int gb28181_make_psm_header(char *pData)  
 {
-    bits_buffer_s   bitsBuffer;  
+    BITS_BUFFER_S   bitsBuffer;  
     bitsBuffer.i_size = PSM_HDR_LEN;   
     bitsBuffer.i_data = 0;  
     bitsBuffer.i_mask = 0x80;  
@@ -141,7 +140,7 @@ int gb28181_make_psm_header(char *pData)
 int gb28181_make_pes_header(char *pData, int stream_id, int payload_len, unsigned long long pts, unsigned long long dts)  
 {  
       
-    bits_buffer_s   bitsBuffer;  
+    BITS_BUFFER_S   bitsBuffer;  
     bitsBuffer.i_size = PES_HDR_LEN;  
     bitsBuffer.i_data = 0;  
     bitsBuffer.i_mask = 0x80;  
