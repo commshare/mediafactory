@@ -197,19 +197,21 @@ int gb28181_make_pes_header(char *pData, int stream_id, int payload_len, unsigne
 struct psmux_tag_t
 {
     std::fstream fsps;
+    uint32_t framecount;
 };
 
-int gb28181_make_psheader(void* handle, Data_Info_s* pPacker)  
+int gb28181_make_psheader(void* handle, uint64_t timestamp)  
 {  
     psmux_tag_t *inst = (psmux_tag_t*)handle;
 
     char szTempPacketHead[256] = {0};  
     int  nSizePos = 0;  
     // 1 package for ps header   
-    gb28181_make_ps_header(szTempPacketHead + nSizePos, pPacker->s64CurPts);  
+    gb28181_make_ps_header(szTempPacketHead + nSizePos, timestamp);  
     nSizePos += PS_HDR_LEN;   
     //2 system header   
-    if( pPacker->IFrame == 1 )  
+//    if( pPacker->IFrame == 1 )  
+    if( inst->framecount % 100 == 0 )
     {  
         // 如果是I帧的话，则添加系统头  
         gb28181_make_sys_header(szTempPacketHead + nSizePos);  
@@ -229,17 +231,20 @@ void *psmux_alloc()
 {
     psmux_tag_t *inst = new psmux_tag_t;
 
+    inst->framecount = 0;
+
     return inst;
 }
 
-int psmux_writeframe(void* handle, char *pData, int nFrameLen, Data_Info_s* pPacker, int isvideo)  
+int psmux_writeframe(void* handle, char *pData, int nFrameLen, uint64_t timestamp, int isvideo)  
 {
     psmux_tag_t *inst = (psmux_tag_t*)handle;
 
     char szTempPacketHead[256] = {0};  
     int  nSizePos = PES_HDR_LEN;  
+    inst->framecount++;
 
-    gb28181_make_psheader(handle, pPacker);
+    gb28181_make_psheader(handle, timestamp);
 
     int stream_type = 0xE0;//video
     if( !isvideo )
@@ -252,7 +257,7 @@ int psmux_writeframe(void* handle, char *pData, int nFrameLen, Data_Info_s* pPac
         //每次帧的长度不要超过short类型，过了就得分片进循环行发送  
         int nSize = (nFrameLen > PS_PES_PAYLOAD_SIZE) ? PS_PES_PAYLOAD_SIZE : nFrameLen;  
         // 添加pes头  
-        gb28181_make_pes_header(szTempPacketHead, stream_type, nSize, pPacker->s64CurPts, pPacker->s64CurPts);  
+        gb28181_make_pes_header(szTempPacketHead, stream_type, nSize, timestamp, timestamp);  
 
         ///////////////todo output szTempPacketHead and pData
 	  	inst->fsps.write(szTempPacketHead, nSizePos);
@@ -269,6 +274,7 @@ int psmux_writeframe(void* handle, char *pData, int nFrameLen, Data_Info_s* pPac
 int psmux_free(void *handle)
 {
     psmux_tag_t *inst = (psmux_tag_t*)handle;
+
     delete inst;
 
     return 0;
