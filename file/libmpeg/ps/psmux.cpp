@@ -103,28 +103,32 @@ int gb28181_make_psm_header(char *pData)
     memset(bitsBuffer.p_data, 0, PSM_HDR_LEN);  
     bits_write(&bitsBuffer, 24,0x000001);   /*start code*/  
     bits_write(&bitsBuffer, 8, 0xBC);       /*map stream id*/  
-    bits_write(&bitsBuffer, 16,PSM_HDR_LEN - 6);         /*program stream map length*/   
+    bits_write(&bitsBuffer, 16,PSM_HDR_LEN - 6 + 4);         /*program stream map length*/   
     bits_write(&bitsBuffer, 1, 1);          /*current next indicator */  
     bits_write(&bitsBuffer, 2, 3);          /*reserved*/  
     bits_write(&bitsBuffer, 5, 0);          /*program stream map version*/  
     bits_write(&bitsBuffer, 7, 0x7F);       /*reserved */  
     bits_write(&bitsBuffer, 1, 1);          /*marker bit */  
     bits_write(&bitsBuffer, 16,0);          /*programe stream info length*/  
-    bits_write(&bitsBuffer, 16, 4);         /*elementary stream map length  is*/  
-//    bits_write(&bitsBuffer, 16, 8);         /*elementary stream map length  is*/  
+//    bits_write(&bitsBuffer, 16, 4);         /*elementary stream map length  is*/  
+    bits_write(&bitsBuffer, 16, 8);         /*elementary stream map length  is*/  
     /*audio*/  
-//    bits_write(&bitsBuffer, 8, 0x90);       /*stream_type*/  
-//    bits_write(&bitsBuffer, 8, 0xC0);       /*elementary_stream_id*/  
-//    bits_write(&bitsBuffer, 16, 0);         /*elementary_stream_info_length is*/  
+    bits_write(&bitsBuffer, 8, 0x0F);       /*stream_type*/  
+    bits_write(&bitsBuffer, 8, 0xC0);       /*elementary_stream_id*/  
+    bits_write(&bitsBuffer, 16, 0);         /*elementary_stream_info_length is*/  
     /*video*/  
     bits_write(&bitsBuffer, 8, 0x1B);       /*stream_type*/  
     bits_write(&bitsBuffer, 8, 0xE0);       /*elementary_stream_id*/  
     bits_write(&bitsBuffer, 16, 0);         /*elementary_stream_info_length */  
+
+    uint32_t crc = CRC_encode(pData+6, bitsBuffer.i_data-6);    
+    bits_write(&bitsBuffer, 32, crc);       /*crc (24~31) bits*/  
+
     /*crc (2e b9 0f 3d)*/  
-    bits_write(&bitsBuffer, 8, 0x45);       /*crc (24~31) bits*/  
-    bits_write(&bitsBuffer, 8, 0xBD);       /*crc (16~23) bits*/  
-    bits_write(&bitsBuffer, 8, 0xDC);       /*crc (8~15) bits*/  
-    bits_write(&bitsBuffer, 8, 0xF4);       /*crc (0~7) bits*/  
+//    bits_write(&bitsBuffer, 8, 0x45);       /*crc (24~31) bits*/  
+//    bits_write(&bitsBuffer, 8, 0xBD);       /*crc (16~23) bits*/  
+//    bits_write(&bitsBuffer, 8, 0xDC);       /*crc (8~15) bits*/  
+//    bits_write(&bitsBuffer, 8, 0xF4);       /*crc (0~7) bits*/  
     return 0;  
 }  
 

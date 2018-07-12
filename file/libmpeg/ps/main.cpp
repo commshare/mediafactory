@@ -34,7 +34,7 @@ int main()
 		ret = AACDemux_GetFrame(handle, &frame, &length);
 		if( ret < 0 )
 			break;
-//		psmux_writeframe(pshandle, frame, length, pts, 0);
+		psmux_writeframe(pshandle, frame, length, pts, 0);
 
 		ret = H264Demux_GetFrame(h264handle, &h264frame, &framelength);
 		if( ret < 0 )
