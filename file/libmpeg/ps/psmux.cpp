@@ -227,11 +227,12 @@ int gb28181_make_psheader(void* handle, uint64_t timestamp)
 }
 
 //////////////////////////////////////////////////////////////
-void *psmux_alloc()
+void *psmux_alloc(const char* filename)
 {
     psmux_tag_t *inst = new psmux_tag_t;
 
     inst->framecount = 0;
+    inst->fsps.open(filename, std::ios::binary | std::ios::out);
 
     return inst;
 }
@@ -275,6 +276,7 @@ int psmux_free(void *handle)
 {
     psmux_tag_t *inst = (psmux_tag_t*)handle;
 
+    inst->fsps.close();
     delete inst;
 
     return 0;

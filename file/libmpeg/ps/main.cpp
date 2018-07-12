@@ -4,7 +4,7 @@
 
 #include "aacdemux.h"
 #include "h264demux.h"
-#include "tsmux2.h"
+#include "psmux.h"
 
 int main()
 {

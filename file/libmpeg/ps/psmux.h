@@ -4,7 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 
-void *psmux_alloc();
+void *psmux_alloc(const char* filename);
 
 int psmux_writeframe(char *pData, int nFrameLen, Data_Info_s* pPacker, int isvideo);
 
