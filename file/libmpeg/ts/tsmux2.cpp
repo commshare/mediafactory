@@ -24,12 +24,12 @@ int ts_pointer_field(char *buf);
  *@remark : 添加pat头  
  */  
 int mk_ts_pat_packet(char *buf, int counter);
-int ts_pmt_header(char *buf);
+int ts_pmt_header(char *buf, stream_info* streams, int streamcount);
 
 /*  
  *@remaark: 添加PMT头 
  */  
-int mk_ts_pmt_packet(char *buf, int counter);
+int mk_ts_pmt_packet(char *buf, int counter, stream_info* streams, int streamcount);
 int ts_adaptation_field(char *buf, int adaptionlength, int writepcr, uint64_t timestamp);
 
 /*  
@@ -186,11 +186,11 @@ int mk_ts_pat_packet(char *buf, int counter)
     return TS_PACKET_SIZE;  
 }  
 
-int ts_pmt_header(char *buf)
+int ts_pmt_header(char *buf, stream_info* streams, int streamcount)
 {  
     BITS_BUFFER_S bits;  
   
-    if (!buf)  
+    if (!buf || streamcount <= 0 )  
     {  
         return 0;  
     }  
@@ -202,9 +202,8 @@ int ts_pmt_header(char *buf)
     bits_write(&bits, 1, 1);                // section syntax indicator, 固定为1  
     bits_write(&bits, 1, 0);                // zero, 0  
     bits_write(&bits, 2, 0x03);             // reserved1, 固定为0x03  
-//    bits_write(&bits, 12, 0x12);            // section length, 表示这个字节后面有用的字节数, 包括CRC32  
-    bits_write(&bits, 12, 0x17);            // section length, 表示这个字节后面有用的字节数, 包括CRC32  
-      
+    bits_write(&bits, 12, 0x0D + 5 * streamcount);            // section length, 表示这个字节后面有用的字节数, 包括CRC32  
+
     bits_write(&bits, 16, 0x0001);          // program number, 表示当前的PMT关联到的频道号码  
 
     bits_write(&bits, 2, 0x03);             // reserved2, 固定为0x03  
@@ -218,19 +217,16 @@ int ts_pmt_header(char *buf)
     bits_write(&bits, 13, TS_PCR_PID);    // pcr of pid in ts head, 如果对于私有数据流的节目定义与PCR无关，这个域的值将为0x1FFF  
     bits_write(&bits, 4, 0x0F);             // reserved4, 固定为0x0F  
     bits_write(&bits, 12, 0x00);            // program info length, 前两位bit为00  
-  
-    bits_write(&bits, 8, TS_PMT_STREAMTYPE_H264_VIDEO);     // stream type, 标志是Video还是Audio还是其他数据  
-    bits_write(&bits, 3, 0x07);             // reserved, 固定为0x07  
-    bits_write(&bits, 13, TS_PID_VIDEO);    // elementary of pid in ts head  
-    bits_write(&bits, 4, 0x0F);             // reserved, 固定为0x0F  
-    bits_write(&bits, 12, 0x00);            // elementary stream info length, 前两位bit为00  
- 
-    bits_write(&bits, 8, TS_PMT_STREAMTYPE_AAC_AUDIO);     // stream type, 标志是Video还是Audio还是其他数据  
-    bits_write(&bits, 3, 0x07);             // reserved, 固定为0x07  
-    bits_write(&bits, 13, TS_PID_AUDIO);    // elementary of pid in ts head  
-    bits_write(&bits, 4, 0x0F);             // reserved, 固定为0x0F  
-    bits_write(&bits, 12, 0x00);            // elementary stream info length, 前两位bit为00  
-  
+
+    for( int i=0; i<streamcount;i++)
+    {
+        bits_write(&bits, 8, streams[i].streamType);     // stream type, 标志是Video还是Audio还是其他数据  
+        bits_write(&bits, 3, 0x07);             // reserved, 固定为0x07  
+        bits_write(&bits, 13, streams[i].streamPID);    // elementary of pid in ts head  
+        bits_write(&bits, 4, 0x0F);             // reserved, 固定为0x0F  
+        bits_write(&bits, 12, 0x00);            // elementary stream info length, 前两位bit为00          
+    }  
+
     bits_align(&bits);
     return bits.i_data;
 }
@@ -238,7 +234,7 @@ int ts_pmt_header(char *buf)
 /*  
  *@remaark: 添加PMT头 
  */  
-int mk_ts_pmt_packet(char *buf, int counter)  
+int mk_ts_pmt_packet(char *buf, int counter, stream_info* streams, int streamcount)  
 {
     int nOffset = 0;  
     int nRet = 0;  
@@ -260,7 +256,7 @@ int mk_ts_pmt_packet(char *buf, int counter)
     }  
     nOffset += nRet;  
 
-    if (0 >= (nRet = ts_pmt_header(buf + nOffset)))  
+    if (0 >= (nRet = ts_pmt_header(buf + nOffset, streams, streamcount)))
     {  
         return 0;  
     }
@@ -416,6 +412,12 @@ struct tsmux_tag_t
     unsigned int communitycounter;
     std::fstream fsts;
     uint32_t framecount;
+
+    stream_info streaminfo[2];
+    int streamcount;
+
+    int videopid;
+    int audiopid;
 };
 
 void *es2ts_alloc(const char* filename)
@@ -424,8 +426,36 @@ void *es2ts_alloc(const char* filename)
     inst->pmtcounter = 0;
     inst->communitycounter = 0;
     inst->framecount = 0;
+    inst->streamcount = 0;
+    inst->videopid = inst->audiopid = -1;
     inst->fsts.open(filename, std::ios::binary | std::ios::out);
     return inst;
+}
+
+int es2ts_addvideostream(void *handle)
+{
+    tsmux_tag_t *inst = (tsmux_tag_t*)handle;
+
+    inst->streaminfo[inst->streamcount].streamType = TS_PMT_STREAMTYPE_H264_VIDEO;
+    inst->streaminfo[inst->streamcount].streamPID = TS_PID_VIDEO;
+
+    inst->streamcount++;
+    inst->videopid = TS_PID_VIDEO;
+
+    return 0;    
+}
+
+int es2ts_addaudiostream(void *handle)
+{
+    tsmux_tag_t *inst = (tsmux_tag_t*)handle;
+
+    inst->streaminfo[inst->streamcount].streamType = TS_PMT_STREAMTYPE_AAC_AUDIO;
+    inst->streaminfo[inst->streamcount].streamPID = TS_PID_AUDIO;
+
+    inst->streamcount++;
+    inst->audiopid = TS_PID_AUDIO;
+
+    return 0;    
 }
 
 int es2ts_write_frame(void *handle, const char* framedata, int nFrameLen, uint64_t timestamp, int isvideo)
@@ -448,7 +478,7 @@ int es2ts_write_frame(void *handle, const char* framedata, int nFrameLen, uint64
 
         nSendDataOff += nRet;  
 
-        nRet = mk_ts_pmt_packet(TSFrameHdr + nSendDataOff, inst->pmtcounter);      
+        nRet = mk_ts_pmt_packet(TSFrameHdr + nSendDataOff, inst->pmtcounter, inst->streaminfo, inst->streamcount);      
 //        printf("mk_ts_pmt_packet %d \n", nRet);
         if( nRet <= 0)      
             return -1;  
@@ -459,9 +489,10 @@ int es2ts_write_frame(void *handle, const char* framedata, int nFrameLen, uint64
     }
     inst->framecount++;
 
-    int streamPID = TS_PID_VIDEO;
+    int streamPID = inst->videopid;
     if( !isvideo )
-        streamPID = TS_PID_AUDIO;
+        streamPID = inst->audiopid;
+
     nSendDataOff = 0;
     //get first pes ts header
     nRet = mk_ts_data_packet(streamPID, TSFrameHdr + nSendDataOff, nFrameLen+19, 1, 1, 1, inst->communitycounter++, timestamp);
@@ -472,7 +503,6 @@ int es2ts_write_frame(void *handle, const char* framedata, int nFrameLen, uint64
     int streamType = 0xE0;//video type
     if( !isvideo )
         streamType = 0xC0;
-
 
     nRet = make_pes_header(TSFrameHdr + nSendDataOff, streamType, nFrameLen, timestamp, timestamp);
     nSendDataOff += nRet;

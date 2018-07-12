@@ -17,6 +17,8 @@ int main()
 	}
 
 	void* tshandle = es2ts_alloc("test.ts");
+	es2ts_addvideostream(tshandle);
+	es2ts_addaudiostream(tshandle);
 
 	const char *frame = NULL;
 	int length = 0;

@@ -30,6 +30,11 @@ struct ts_header_t{
     char    continuity_conunter:4;                    //连续计数器 0-15
 };
 
+struct stream_info{
+    int streamType;
+    int streamPID;
+};
+
 // TS adaptation flags
 typedef struct
 {
