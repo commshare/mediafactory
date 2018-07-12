@@ -236,8 +236,8 @@ int ts_pmt_header(char *buf, stream_info* streams, int streamcount)
  */  
 int mk_ts_pmt_packet(char *buf, int counter, stream_info* streams, int streamcount)  
 {
-    int nOffset = 0;  
-    int nRet = 0;  
+    int nOffset = 0;
+    int nRet = 0;
       
     if (!buf)  
     {  
@@ -435,12 +435,12 @@ void *es2ts_alloc(const char* filename)
 int es2ts_addvideostream(void *handle)
 {
     tsmux_tag_t *inst = (tsmux_tag_t*)handle;
+    inst->videopid = TS_PID_VIDEO;
 
     inst->streaminfo[inst->streamcount].streamType = TS_PMT_STREAMTYPE_H264_VIDEO;
-    inst->streaminfo[inst->streamcount].streamPID = TS_PID_VIDEO;
+    inst->streaminfo[inst->streamcount].streamPID = inst->videopid;
 
     inst->streamcount++;
-    inst->videopid = TS_PID_VIDEO;
 
     return 0;    
 }
@@ -448,12 +448,12 @@ int es2ts_addvideostream(void *handle)
 int es2ts_addaudiostream(void *handle)
 {
     tsmux_tag_t *inst = (tsmux_tag_t*)handle;
+    inst->audiopid = TS_PID_AUDIO;
 
     inst->streaminfo[inst->streamcount].streamType = TS_PMT_STREAMTYPE_AAC_AUDIO;
-    inst->streaminfo[inst->streamcount].streamPID = TS_PID_AUDIO;
+    inst->streaminfo[inst->streamcount].streamPID = inst->audiopid;
 
     inst->streamcount++;
-    inst->audiopid = TS_PID_AUDIO;
 
     return 0;    
 }
