@@ -6,10 +6,6 @@
 
 #include "utils.h"
 
-std::fstream fsps;
-std::fstream fs264;
-FILE *bits = NULL;                //!< the bit stream file  
-
 /*** 
  *@remark:   ps头的封装,里面的具体数据的填写已经占位，可以参考标准 
  *@param :   pData  [in] 填充ps头数据的地址 
@@ -198,8 +194,15 @@ int gb28181_make_pes_header(char *pData, int stream_id, int payload_len, unsigne
     return 0;  
 }  
 
-int gb28181_make_psheader(Data_Info_s* pPacker)  
+struct psmux_tag_t
+{
+    std::fstream fsps;
+};
+
+int gb28181_make_psheader(void* handle, Data_Info_s* pPacker)  
 {  
+    psmux_tag_t *inst = (psmux_tag_t*)handle;
+
     char szTempPacketHead[256] = {0};  
     int  nSizePos = 0;  
     // 1 package for ps header   
@@ -217,17 +220,26 @@ int gb28181_make_psheader(Data_Info_s* pPacker)
     }  
   
     ////////////todo output szTempPacketHead
-  	fsps.write(szTempPacketHead, nSizePos);
+  	inst->fsps.write(szTempPacketHead, nSizePos);
     return 0;  
 }
 
 //////////////////////////////////////////////////////////////
-int gb28181_es2psForH264(char *pData, int nFrameLen, Data_Info_s* pPacker, int stream_type)  
+void *psmux_alloc()
+{
+    psmux_tag_t *inst = new psmux_tag_t;
+
+    return inst;
+}
+
+int psmux_writeForH264(void* handle, char *pData, int nFrameLen, Data_Info_s* pPacker, int stream_type)  
 {  
+    psmux_tag_t *inst = (psmux_tag_t*)handle;
+
     char szTempPacketHead[256] = {0};  
     int  nSizePos = PES_HDR_LEN;  
 
-    gb28181_make_psheader(pPacker);
+    gb28181_make_psheader(handle, pPacker);
 
     // 这里向后移动是为了方便拷贝pes头  
     //这里是为了减少后面音视频裸数据的大量拷贝浪费空间，所以这里就向后移动，在实际处理的时候，要注意地址是否越界以及覆盖等问题  
@@ -239,8 +251,8 @@ int gb28181_es2psForH264(char *pData, int nFrameLen, Data_Info_s* pPacker, int s
         gb28181_make_pes_header(szTempPacketHead, stream_type ? 0xC0:0xE0, nSize, pPacker->s64CurPts, pPacker->s64CurPts);  
 
         ///////////////todo output szTempPacketHead and pData
-	  	fsps.write(szTempPacketHead, nSizePos);
-      	fsps.write(pData, nSize);
+	  	inst->fsps.write(szTempPacketHead, nSizePos);
+      	inst->fsps.write(pData, nSize);
 
         //分片后每次发送的数据移动指针操作  
         nFrameLen -= nSize;  
@@ -248,4 +260,12 @@ int gb28181_es2psForH264(char *pData, int nFrameLen, Data_Info_s* pPacker, int s
         pData     += nSize;  
     }  
     return 0;  
+}
+
+int psmux_free(void *handle)
+{
+    psmux_tag_t *inst = (psmux_tag_t*)handle;
+    delete inst;
+
+    return 0;
 }

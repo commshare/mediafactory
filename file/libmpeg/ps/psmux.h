@@ -4,4 +4,8 @@
 #include <string.h>
 #include <unistd.h>
 
-int gb28181_es2psForH264(char *pData, int nFrameLen, Data_Info_s* pPacker, int stream_type);
+void *psmux_alloc();
+
+int psmux_writeForH264(char *pData, int nFrameLen, Data_Info_s* pPacker, int stream_type);
+
+int psmux_free(void *handle);
