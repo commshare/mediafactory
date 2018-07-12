@@ -6,6 +6,6 @@
 
 void *psmux_alloc(const char* filename);
 
-int psmux_writeframe(char *pData, int nFrameLen, Data_Info_s* pPacker, int isvideo);
+int psmux_writeframe(void* handle, char *pData, int nFrameLen, uint64_t timestamp, int isvideo);
 
 int psmux_free(void *handle);
