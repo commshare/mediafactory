@@ -35,7 +35,7 @@ int ts_adaptation_field(char *buf, int adaptionlength, int writepcr, uint64_t ti
 /*  
  *@remark: ts头的封装 
  */  
-int mk_ts_data_packet(char *buf, int nFramelen, int bStart, int adaptionfield, int writepcr, int counter, uint64_t timestamp);
+int mk_ts_data_packet(int pid, char *buf, int nFramelen, int bStart, int adaptionfield, int writepcr, int counter, uint64_t timestamp);
 int make_pes_header(char *pData, int stream_id, int payload_len, uint64_t pts, uint64_t dts);
 
 /* *@remark: ts头相关封装 
@@ -202,7 +202,8 @@ int ts_pmt_header(char *buf)
     bits_write(&bits, 1, 1);                // section syntax indicator, 固定为1  
     bits_write(&bits, 1, 0);                // zero, 0  
     bits_write(&bits, 2, 0x03);             // reserved1, 固定为0x03  
-    bits_write(&bits, 12, 0x12);            // section length, 表示这个字节后面有用的字节数, 包括CRC32  
+//    bits_write(&bits, 12, 0x12);            // section length, 表示这个字节后面有用的字节数, 包括CRC32  
+    bits_write(&bits, 12, 0x17);            // section length, 表示这个字节后面有用的字节数, 包括CRC32  
       
     bits_write(&bits, 16, 0x0001);          // program number, 表示当前的PMT关联到的频道号码  
 
@@ -223,6 +224,12 @@ int ts_pmt_header(char *buf)
     bits_write(&bits, 13, TS_PID_VIDEO);    // elementary of pid in ts head  
     bits_write(&bits, 4, 0x0F);             // reserved, 固定为0x0F  
     bits_write(&bits, 12, 0x00);            // elementary stream info length, 前两位bit为00  
+ 
+    bits_write(&bits, 8, TS_PMT_STREAMTYPE_AAC_AUDIO);     // stream type, 标志是Video还是Audio还是其他数据  
+    bits_write(&bits, 3, 0x07);             // reserved, 固定为0x07  
+    bits_write(&bits, 13, TS_PID_AUDIO);    // elementary of pid in ts head  
+    bits_write(&bits, 4, 0x0F);             // reserved, 固定为0x0F  
+    bits_write(&bits, 12, 0x00);            // elementary stream info length, 前两位bit为00  
   
     bits_align(&bits);
     return bits.i_data;
@@ -239,7 +246,7 @@ int mk_ts_pmt_packet(char *buf, int counter)
     if (!buf)  
     {  
         return 0;  
-    }  
+    }
   
     if (0 >= (nRet = ts_header(buf, TS_PID_PMT, 1, 0, counter)))  
     {  
@@ -276,7 +283,7 @@ int ts_adaptation_field(char *buf, int adaptionlength, int writepcr, uint64_t ti
     if (!buf)
     {  
         return 0;  
-    }  
+    }
     bits_initwrite(&bits, 32, (unsigned char *)buf);  
 
     bits_write(&bits, 8, adaptionlength);  
@@ -307,14 +314,14 @@ int ts_adaptation_field(char *buf, int adaptionlength, int writepcr, uint64_t ti
 /*  
  *@remark: ts头的封装 
  */  
-int mk_ts_data_packet(char *buf, int nFramelen, int bStart, int adaptionfield, int writepcr, int counter, uint64_t timestamp)  
+int mk_ts_data_packet(int pid, char *buf, int nFramelen, int bStart, int adaptionfield, int writepcr, int counter, uint64_t timestamp)  
 {  
     if (!buf)  
     {  
         return 0;  
     }  
   
-    int nRet = ts_header(buf, TS_PID_VIDEO, bStart, adaptionfield, counter);
+    int nRet = ts_header(buf, pid, bStart, adaptionfield, counter);
     if( nRet <= 0 )
     {  
         return 0;  
@@ -452,18 +459,22 @@ int es2ts_write_frame(void *handle, const char* framedata, int nFrameLen, uint64
     }
     inst->framecount++;
 
+    int streamPID = TS_PID_VIDEO;
+    if( !isvideo )
+        streamPID = TS_PID_AUDIO;
     nSendDataOff = 0;
     //get first pes ts header
-    nRet = mk_ts_data_packet(TSFrameHdr + nSendDataOff, nFrameLen+19, 1, 1, 1, inst->communitycounter++, timestamp);
+    nRet = mk_ts_data_packet(streamPID, TSFrameHdr + nSendDataOff, nFrameLen+19, 1, 1, 1, inst->communitycounter++, timestamp);
     nSendDataOff += nRet;
     int packetoffset = nRet;
 
     //get pes header
-    int streamID = 0xE0;//video type
+    int streamType = 0xE0;//video type
     if( !isvideo )
-        streamID = 0xC0;
+        streamType = 0xC0;
 
-    nRet = make_pes_header(TSFrameHdr + nSendDataOff, streamID, nFrameLen, timestamp, timestamp);
+
+    nRet = make_pes_header(TSFrameHdr + nSendDataOff, streamType, nFrameLen, timestamp, timestamp);
     nSendDataOff += nRet;
     packetoffset += nRet;
 //    printf("make_pes_header %d %d\n", nRet, packetoffset);
@@ -489,7 +500,7 @@ int es2ts_write_frame(void *handle, const char* framedata, int nFrameLen, uint64
         if(nFrameLen >= TS_PACKET_SIZE - 6)
         {
             //get other ts header
-            nRet = mk_ts_data_packet(TSFrameHdr, nFrameLen, 0, 0, 0, inst->communitycounter++, timestamp);
+            nRet = mk_ts_data_packet(streamPID, TSFrameHdr, nFrameLen, 0, 0, 0, inst->communitycounter++, timestamp);
             nSendDataOff = nRet;
 
             nWriteSize = TS_PACKET_SIZE - nRet;
@@ -503,7 +514,7 @@ int es2ts_write_frame(void *handle, const char* framedata, int nFrameLen, uint64
         else
         {
             //get other ts header
-            nRet = mk_ts_data_packet(TSFrameHdr, nFrameLen, 0, 1, 0, inst->communitycounter++, timestamp);
+            nRet = mk_ts_data_packet(streamPID, TSFrameHdr, nFrameLen, 0, 1, 0, inst->communitycounter++, timestamp);
             nSendDataOff = nRet;
 
             nWriteSize = nFrameLen;  
