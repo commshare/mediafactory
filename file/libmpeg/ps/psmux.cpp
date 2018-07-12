@@ -4,6 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "psmux.h"
 #include "utils.h"
 
 /*** 
@@ -237,7 +238,7 @@ void *psmux_alloc(const char* filename)
     return inst;
 }
 
-int psmux_writeframe(void* handle, char *pData, int nFrameLen, uint64_t timestamp, int isvideo)  
+int psmux_writeframe(void* handle, const char *pData, int nFrameLen, uint64_t timestamp, int isvideo)  
 {
     psmux_tag_t *inst = (psmux_tag_t*)handle;
 

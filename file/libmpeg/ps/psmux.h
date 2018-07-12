@@ -3,9 +3,10 @@
 #include <fstream>
 #include <string.h>
 #include <unistd.h>
+#include <stdint.h>
 
 void *psmux_alloc(const char* filename);
 
-int psmux_writeframe(void* handle, char *pData, int nFrameLen, uint64_t timestamp, int isvideo);
+int psmux_writeframe(void* handle, const char *pData, int nFrameLen, uint64_t timestamp, int isvideo);
 
 int psmux_free(void *handle);

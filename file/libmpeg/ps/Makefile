@@ -7,7 +7,7 @@ TARGET0 = tstest
 TARGETS = $(TARGET0)
 
 OBJS = ../../libh26x/h264demux.o ../../libh26x/spspps.o \
-		../../libaac/aacdemux.o psmux2.o \
+		../../libaac/aacdemux.o psmux.o \
 		utils.o \
 		main.o
 
