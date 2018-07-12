@@ -47,12 +47,12 @@ int make_pes_header(char *pData, int stream_id, int payload_len, uint64_t pts, u
  *  一个频道中可以有多个PES流(用PMT中的mpt_stream区分) 
  */  
 int ts_header(char *buf, int pid, int payload_unit_start_indicator, int adaptation_field_control, int counter)  
-{    
+{
     if (!buf)  
     {  
         return 0;  
     }  
-  
+
     BITS_BUFFER_S bits;  
     bits_initwrite(&bits, 32, (unsigned char *)buf);  
   
@@ -81,9 +81,9 @@ int ts_header(char *buf, int pid, int payload_unit_start_indicator, int adaptati
 
 int ts_writecrc(char *buf, uint32_t crc)
 {
-    BITS_BUFFER_S bits;  
+    BITS_BUFFER_S bits;
       
-    if (!buf)  
+    if (!buf)
     {  
         return 0;  
     }  
