@@ -205,7 +205,7 @@ int ts_pmt_header(char *buf)
     bits_write(&bits, 12, 0x12);            // section length, 表示这个字节后面有用的字节数, 包括CRC32  
       
     bits_write(&bits, 16, 0x0001);          // program number, 表示当前的PMT关联到的频道号码  
-      
+
     bits_write(&bits, 2, 0x03);             // reserved2, 固定为0x03  
     bits_write(&bits, 5, 0x00);             // version number, 范围0-31  
     bits_write(&bits, 1, 1);                // current next indicator, 0 下一个表有效, 1当前传送的PAT表可以使用  
@@ -224,15 +224,15 @@ int ts_pmt_header(char *buf)
     bits_write(&bits, 4, 0x0F);             // reserved, 固定为0x0F  
     bits_write(&bits, 12, 0x00);            // elementary stream info length, 前两位bit为00  
   
-    bits_align(&bits);  
-    return bits.i_data;  
-}  
+    bits_align(&bits);
+    return bits.i_data;
+}
 
 /*  
  *@remaark: 添加PMT头 
  */  
 int mk_ts_pmt_packet(char *buf, int counter)  
-{  
+{
     int nOffset = 0;  
     int nRet = 0;  
       
@@ -273,7 +273,7 @@ int ts_adaptation_field(char *buf, int adaptionlength, int writepcr, uint64_t ti
 {
     BITS_BUFFER_S bits;  
       
-    if (!buf)  
+    if (!buf)
     {  
         return 0;  
     }  
@@ -421,10 +421,7 @@ void *es2ts_alloc(const char* filename)
     return inst;
 }
 
-/* 
- *@remark: 整体发送数据的抽象逻辑处理函数接口 
- */  
-int es2ts_writeH264(void *handle, const char* framedata, int nFrameLen, uint64_t timestamp)
+int es2ts_write_frame(void *handle, const char* framedata, int nFrameLen, uint64_t timestamp, int isvideo)
 {
     tsmux_tag_t *inst = (tsmux_tag_t*)handle;
     if( !inst || !inst->fsts.is_open() )
@@ -462,7 +459,11 @@ int es2ts_writeH264(void *handle, const char* framedata, int nFrameLen, uint64_t
     int packetoffset = nRet;
 
     //get pes header
-    nRet = make_pes_header(TSFrameHdr + nSendDataOff, 0xE0, nFrameLen, timestamp, timestamp);
+    int streamID = 0xE0;//video type
+    if( !isvideo )
+        streamID = 0xC0;
+
+    nRet = make_pes_header(TSFrameHdr + nSendDataOff, streamID, nFrameLen, timestamp, timestamp);
     nSendDataOff += nRet;
     packetoffset += nRet;
 //    printf("make_pes_header %d %d\n", nRet, packetoffset);
