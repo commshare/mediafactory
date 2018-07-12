@@ -232,14 +232,18 @@ void *psmux_alloc()
     return inst;
 }
 
-int psmux_writeForH264(void* handle, char *pData, int nFrameLen, Data_Info_s* pPacker, int stream_type)  
-{  
+int psmux_writeframe(void* handle, char *pData, int nFrameLen, Data_Info_s* pPacker, int isvideo)  
+{
     psmux_tag_t *inst = (psmux_tag_t*)handle;
 
     char szTempPacketHead[256] = {0};  
     int  nSizePos = PES_HDR_LEN;  
 
     gb28181_make_psheader(handle, pPacker);
+
+    int stream_type = 0xE0;//video
+    if( !isvideo )
+        stream_type = 0xC0;//audio
 
     // 这里向后移动是为了方便拷贝pes头  
     //这里是为了减少后面音视频裸数据的大量拷贝浪费空间，所以这里就向后移动，在实际处理的时候，要注意地址是否越界以及覆盖等问题  
@@ -248,7 +252,7 @@ int psmux_writeForH264(void* handle, char *pData, int nFrameLen, Data_Info_s* pP
         //每次帧的长度不要超过short类型，过了就得分片进循环行发送  
         int nSize = (nFrameLen > PS_PES_PAYLOAD_SIZE) ? PS_PES_PAYLOAD_SIZE : nFrameLen;  
         // 添加pes头  
-        gb28181_make_pes_header(szTempPacketHead, stream_type ? 0xC0:0xE0, nSize, pPacker->s64CurPts, pPacker->s64CurPts);  
+        gb28181_make_pes_header(szTempPacketHead, stream_type, nSize, pPacker->s64CurPts, pPacker->s64CurPts);  
 
         ///////////////todo output szTempPacketHead and pData
 	  	inst->fsps.write(szTempPacketHead, nSizePos);

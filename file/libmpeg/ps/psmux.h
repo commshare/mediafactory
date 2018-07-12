@@ -6,6 +6,6 @@
 
 void *psmux_alloc();
 
-int psmux_writeForH264(char *pData, int nFrameLen, Data_Info_s* pPacker, int stream_type);
+int psmux_writeframe(char *pData, int nFrameLen, Data_Info_s* pPacker, int isvideo);
 
 int psmux_free(void *handle);
