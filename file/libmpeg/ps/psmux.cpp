@@ -252,7 +252,7 @@ int psmux_addaudiostream(void *handle)
     psmux_tag_t *inst = (psmux_tag_t*)handle;
 
     inst->streaminfo[inst->streamcount].streamType = 0xC0;
-    inst->streaminfo[inst->streamcount].streamTypeID = 0x0F;//h264
+    inst->streaminfo[inst->streamcount].streamTypeID = 0x0F;//aac
 
     inst->streamcount++;
 
