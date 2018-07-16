@@ -51,7 +51,7 @@ int gb28181_make_ps_header(char *pData, unsigned long long s64Scr)
  *@param :   pData  [in] 填充ps头数据的地址 
  *@return:   0 success, others failed 
 */  
-int gb28181_make_sys_header(char *pData)  
+int gb28181_make_sys_header(char *pData, ps_stream_info* streaminfo, int streamcount)  
 {
     BITS_BUFFER_S   bitsBuffer;  
     bitsBuffer.i_size = SYS_HDR_LEN;  
@@ -61,7 +61,7 @@ int gb28181_make_sys_header(char *pData)
     memset(bitsBuffer.p_data, 0, SYS_HDR_LEN);  
     /*system header*/  
     bits_write( &bitsBuffer, 32, 0x000001BB);   /*start code*/  
-    bits_write( &bitsBuffer, 16, SYS_HDR_LEN-6);/*header_length 表示次字节后面的长度，后面的相关头也是次意思*/  
+    bits_write( &bitsBuffer, 16, SYS_HDR_LEN-12+streamcount*3);/*header_length 表示次字节后面的长度，后面的相关头也是次意思*/  
     bits_write( &bitsBuffer, 1,  1);            /*marker_bit*/  
     bits_write( &bitsBuffer, 22, 50000);        /*rate_bound*/  
     bits_write( &bitsBuffer, 1,  1);            /*marker_bit*/  
@@ -75,16 +75,15 @@ int gb28181_make_sys_header(char *pData)
     bits_write( &bitsBuffer, 5,  1);            /*video_bound*/  
     bits_write( &bitsBuffer, 1,  0);            /*dif from mpeg1*/  
     bits_write( &bitsBuffer, 7,  0x7F);         /*reserver*/  
-    /*audio stream bound*/  
-    bits_write( &bitsBuffer, 8,  0xC0);         /*stream_id*/  
-    bits_write( &bitsBuffer, 2,  3);            /*marker_bit */  
-    bits_write( &bitsBuffer, 1,  0);            /*PSTD_buffer_bound_scale*/  
-    bits_write( &bitsBuffer, 13, 512);          /*PSTD_buffer_size_bound*/  
-    /*video stream bound*/  
-    bits_write( &bitsBuffer, 8,  0xE0);         /*stream_id*/  
-    bits_write( &bitsBuffer, 2,  3);            /*marker_bit */  
-    bits_write( &bitsBuffer, 1,  1);            /*PSTD_buffer_bound_scale*/  
-    bits_write( &bitsBuffer, 13, 2048);         /*PSTD_buffer_size_bound*/  
+
+    for( int i = 0;i<streamcount;i++)
+    {
+        bits_write( &bitsBuffer, 8,  streaminfo[i].streamType);         /*stream_id*/  
+        bits_write( &bitsBuffer, 2,  3);            /*marker_bit */  
+        bits_write( &bitsBuffer, 1,  0);            /*PSTD_buffer_bound_scale*/  
+        bits_write( &bitsBuffer, 13, 512);          /*PSTD_buffer_size_bound*/          
+    }
+
     return 0;  
 }  
 
@@ -93,7 +92,7 @@ int gb28181_make_sys_header(char *pData)
  *@param :   pData  [in] 填充ps头数据的地址 
  *@return:   0 success, others failed 
 */  
-int gb28181_make_psm_header(char *pData)  
+int gb28181_make_psm_header(char *pData, ps_stream_info* streaminfo, int streamcount)  
 {
     BITS_BUFFER_S   bitsBuffer;  
     bitsBuffer.i_size = PSM_HDR_LEN;   
@@ -103,32 +102,25 @@ int gb28181_make_psm_header(char *pData)
     memset(bitsBuffer.p_data, 0, PSM_HDR_LEN);  
     bits_write(&bitsBuffer, 24,0x000001);   /*start code*/  
     bits_write(&bitsBuffer, 8, 0xBC);       /*map stream id*/  
-    bits_write(&bitsBuffer, 16,PSM_HDR_LEN - 6 + 4);         /*program stream map length*/   
+    bits_write(&bitsBuffer, 16,PSM_HDR_LEN - 10 + streamcount * 4);         /*program stream map length*/   
     bits_write(&bitsBuffer, 1, 1);          /*current next indicator */  
     bits_write(&bitsBuffer, 2, 3);          /*reserved*/  
     bits_write(&bitsBuffer, 5, 0);          /*program stream map version*/  
     bits_write(&bitsBuffer, 7, 0x7F);       /*reserved */  
     bits_write(&bitsBuffer, 1, 1);          /*marker bit */  
     bits_write(&bitsBuffer, 16,0);          /*programe stream info length*/  
-//    bits_write(&bitsBuffer, 16, 4);         /*elementary stream map length  is*/  
-    bits_write(&bitsBuffer, 16, 8);         /*elementary stream map length  is*/  
-    /*audio*/  
-    bits_write(&bitsBuffer, 8, 0x0F);       /*stream_type*/  
-    bits_write(&bitsBuffer, 8, 0xC0);       /*elementary_stream_id*/  
-    bits_write(&bitsBuffer, 16, 0);         /*elementary_stream_info_length is*/  
-    /*video*/  
-    bits_write(&bitsBuffer, 8, 0x1B);       /*stream_type*/  
-    bits_write(&bitsBuffer, 8, 0xE0);       /*elementary_stream_id*/  
-    bits_write(&bitsBuffer, 16, 0);         /*elementary_stream_info_length */  
+    bits_write(&bitsBuffer, 16, streamcount * 4);         /*elementary stream map length  is*/  
+
+    for( int i = 0;i<streamcount;i++)
+    {
+        bits_write(&bitsBuffer, 8, streaminfo[i].streamTypeID);       /*stream_type*/  
+        bits_write(&bitsBuffer, 8, streaminfo[i].streamType);       /*elementary_stream_id*/  
+        bits_write(&bitsBuffer, 16, 0);         /*elementary_stream_info_length is*/  
+    }
 
     uint32_t crc = CRC_encode(pData+6, bitsBuffer.i_data-6);    
     bits_write(&bitsBuffer, 32, crc);       /*crc (24~31) bits*/  
 
-    /*crc (2e b9 0f 3d)*/  
-//    bits_write(&bitsBuffer, 8, 0x45);       /*crc (24~31) bits*/  
-//    bits_write(&bitsBuffer, 8, 0xBD);       /*crc (16~23) bits*/  
-//    bits_write(&bitsBuffer, 8, 0xDC);       /*crc (8~15) bits*/  
-//    bits_write(&bitsBuffer, 8, 0xF4);       /*crc (0~7) bits*/  
     return 0;  
 }  
 
@@ -202,6 +194,8 @@ struct psmux_tag_t
 {
     std::fstream fsps;
     uint32_t framecount;
+    ps_stream_info streaminfo[2];
+    int streamcount;
 };
 
 int gb28181_make_psheader(void* handle, uint64_t timestamp)  
@@ -218,10 +212,10 @@ int gb28181_make_psheader(void* handle, uint64_t timestamp)
     if( inst->framecount % 100 == 0 )
     {  
         // 如果是I帧的话，则添加系统头  
-        gb28181_make_sys_header(szTempPacketHead + nSizePos);  
+        gb28181_make_sys_header(szTempPacketHead + nSizePos, inst->streaminfo, inst->streamcount);  
         nSizePos += SYS_HDR_LEN;  
         //这个地方我是不管是I帧还是p帧都加上了map的，貌似只是I帧加也没有问题  
-        gb28181_make_psm_header(szTempPacketHead + nSizePos);  
+        gb28181_make_psm_header(szTempPacketHead + nSizePos, inst->streaminfo, inst->streamcount);  
         nSizePos += PSM_HDR_LEN;
     }  
   
@@ -239,6 +233,30 @@ void *psmux_alloc(const char* filename)
     inst->fsps.open(filename, std::ios::binary | std::ios::out);
 
     return inst;
+}
+
+int psmux_addvideostream(void *handle)
+{
+    psmux_tag_t *inst = (psmux_tag_t*)handle;
+
+    inst->streaminfo[inst->streamcount].streamType = 0xE0;
+    inst->streaminfo[inst->streamcount].streamTypeID = 0x1B;//h264
+
+    inst->streamcount++;
+
+    return 0;    
+}
+
+int psmux_addaudiostream(void *handle)
+{
+    psmux_tag_t *inst = (psmux_tag_t*)handle;
+
+    inst->streaminfo[inst->streamcount].streamType = 0xC0;
+    inst->streaminfo[inst->streamcount].streamTypeID = 0x0F;//h264
+
+    inst->streamcount++;
+
+    return 0;    
 }
 
 int psmux_writeframe(void* handle, const char *pData, int nFrameLen, uint64_t timestamp, int isvideo)  

@@ -17,6 +17,8 @@ int main()
 	}
 
 	void* pshandle = psmux_alloc("test.ps");
+	psmux_addvideostream(pshandle);
+	psmux_addaudiostream(pshandle);
 
 	const char *frame = NULL;
 	int length = 0;

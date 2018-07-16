@@ -15,6 +15,11 @@
 #define RTP_MAX_PACKET_BUFF 1300
 #define PS_PES_PAYLOAD_SIZE 65535-50
 
+struct ps_stream_info{
+    int streamTypeID;
+    int streamType;
+};
+
 /* @remark: 结构体定义 */  
 typedef struct  
 {  
