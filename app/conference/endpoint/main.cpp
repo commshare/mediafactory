@@ -71,7 +71,7 @@ int sendfile(const char* filepath)
 
 int main()
 {
-	sendfile("D:/test.264");
+	sendfile("./test.264");
 	
 	return 0;
 }

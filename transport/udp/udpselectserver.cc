@@ -134,7 +134,7 @@ int udp_select_server_eventloop(void* handle)
     setsockopt(listenfd,SOL_SOCKET,SO_REUSEADDR,(const char*)&opt,sizeof(opt));  
 
     //把socket设置为非阻塞方式
-    setnonblocking(listenfd);
+//    setnonblocking(listenfd);
 
     memset(&serveraddr, 0, sizeof(serveraddr));
     serveraddr.sin_family = AF_INET;
