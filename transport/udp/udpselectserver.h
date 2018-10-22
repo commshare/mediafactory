@@ -4,10 +4,10 @@
 #include <unistd.h>
 #include <stdio.h>
 
-typedef int (*on_connect_callback)(void* handle, int clientid, void* userdata);
-typedef int (*on_close_callback)(void* handle, int clientid, void* userdata);
+typedef int (*on_recv_callback)(void* handle, char* data, int length, 
+			const char* remoteip, int remoteport, void* userdata);
 
-void* udp_select_server_new(const char* localip, int localport, on_connect_callback connectcallback, on_close_callback closecallback, void* userdata);
+void* udp_select_server_new(const char* localip, int localport, on_recv_callback recv_callback, void* userdata);
 
 int udp_select_server_read(void* handle, int clientid, char* data, int length);
 

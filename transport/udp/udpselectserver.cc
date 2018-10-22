@@ -42,8 +42,7 @@ struct udpserverdesc_t {
     int sockfd;
     std::string localip;
     int localport;
-    on_connect_callback connectcallback;
-    on_close_callback closecallback;
+    on_recv_callback recv_callback;
 
     void* userdata;
     std::thread threadeventloop;
@@ -78,100 +77,6 @@ int setnonblocking(int sock)
     return 0;
 #endif
 }
-
-int udp_socket_connect(void* handle,struct sockaddr_in  *client_addr)  
-{        
-    udpserverdesc_t * inst = (udpserverdesc_t*)handle;
-
-    struct sockaddr_in my_addr, their_addr;  
-    int fd=socket(PF_INET, SOCK_DGRAM, 0);  
-      
-    /*设置socket属性，端口可以重用*/  
-    int opt=SO_REUSEADDR;  
-    setsockopt(fd,SOL_SOCKET,SO_REUSEADDR,(const char*)&opt,sizeof(opt));  
-
-    setnonblocking(fd);  
-    memset(&my_addr, 0, sizeof(my_addr));  
-    my_addr.sin_family = PF_INET;  
-    my_addr.sin_port = htons(inst->localport);  
-    my_addr.sin_addr.s_addr = INADDR_ANY;  
-    if (bind(fd, (struct sockaddr *) &my_addr, sizeof(struct sockaddr)) == -1)   
-    {  
-        perror("bind");  
-        return -1;
-    }   
-    else  
-    {  
-        printf("IP and port bind success \n");  
-    }  
-
-    if(fd==-1)  
-        return  -1;  
-
-    if( connect(fd,(struct sockaddr*)client_addr,sizeof(struct sockaddr_in)) < 0 )
-    {
-        perror("connect");  
-        return -1;        
-    }  
-
-    return fd;     
-}  
-   
-int accept_client(void* handle,int listenfd)  
-{  
-    udpserverdesc_t * inst = (udpserverdesc_t*)handle;
-
-    struct sockaddr_in client_addr;  
-    int addr_size = sizeof(client_addr);  
-    char buf[2048] = {0};  
-    while( 1 )
-    {
-        int ret = recvfrom(listenfd, buf,sizeof(buf), 0, (struct sockaddr *)&client_addr, &addr_size);  
-        //check(ret > 0, "recvfrom error");  
-        if( ret <= 0 )
-        {
-            perror("recvfrom error");
-            break;;
-        }        
-        std::string clientip = inet_ntoa(client_addr.sin_addr);
-        int clientport = ntohs(client_addr.sin_port);
-        std::cout << "recved from " << buf<< ret << std::endl;
-
-        if( !inst->clients.empty() )
-        {
-            UDPCLIENTMAP::iterator iter = inst->clients.begin();
-            for( ;iter != inst->clients.end(); ++iter )
-            {
-                if( iter->second->ip == clientip &&
-                    iter->second->port == clientport )
-                {
-                    iter->second->recvmutex.lock();
-                    iter->second->recvqueue.push_back(std::string(buf, ret));
-                    iter->second->recvmutex.unlock();
-
-                    break;
-                }
-            }        
-            if( iter != inst->clients.end() )
-                continue;
-        }
-
-        std::cout << "accapt a connection from " << clientip<<" "<<clientport << std::endl;
-        int new_sock=udp_socket_connect(handle,(struct sockaddr_in*)&client_addr);  
-          
-        udpclientdesc_t *client = new udpclientdesc_t;
-        client->recvqueue.push_back(std::string(buf, ret));
-        client->sockfd = new_sock;
-        client->ip = clientip;
-        client->port = clientport;
-        inst->clients[new_sock] = client;
-
-        if( inst->connectcallback )
-            inst->connectcallback(inst, new_sock, inst->userdata);
-    }
-
-    return 0;  
-}  
 
 int select_fds(void* handle)
 {
@@ -249,63 +154,23 @@ int udp_select_server_eventloop(void* handle)
     while( 1 ) 
     {
         int nfds = select_fds(handle);
-//        std::cout<<"epoll_wait "<<nfds<<std::endl;
 
         if( fdread_is_selected(handle, listenfd) )
         {
-            accept_client(handle, listenfd);
-        }
-
-        if( !inst->clients.empty() )
-        {
-            for( UDPCLIENTMAP::iterator iter = inst->clients.begin();
-                iter != inst->clients.end();
-                ++iter)
+            struct sockaddr_in client_addr;  
+            int addr_size = sizeof(client_addr);  
+            int ret = recvfrom(listenfd, buffer,sizeof(buffer), 0, (struct sockaddr *)&client_addr, &addr_size);  
+            if( ret <= 0 )
             {
-                if( fdread_is_selected(handle, iter->second->sockfd) )
-                {                
-                    while( 1 )
-                    {
-                        int n = read(iter->second->sockfd, buffer, sizeof(buffer));
-                        if (n < 0) 
-                        {
-                            if (errno != EAGAIN) 
-                            {
-                                if( inst->closecallback )
-                                    inst->closecallback(inst, iter->second->sockfd, inst->userdata);
-                            
-                                close(iter->second->sockfd);
-                            }
-                            break;
-                        } else if (n == 0) {
-                            if( inst->closecallback )
-                                inst->closecallback(inst, iter->second->sockfd, inst->userdata);
-
-                            close(iter->second->sockfd);
-                            break;
-                        }
-                        buffer[n] = '\0';
-                        std::cout<<buffer<<n<<std::endl;
-
-                        iter->second->recvmutex.lock();
-                        iter->second->recvqueue.push_back(std::string(buffer, n));
-                        iter->second->recvmutex.unlock();
-                    }
-                }
-
-                if( fdwrite_is_selected(handle, iter->second->sockfd) )
-                {
-                    iter->second->sendmutex.lock();
-                    if( iter->second->sendqueue.size() > 0 )
-                    {
-                        std::string data = iter->second->sendqueue.front();
-                        write(iter->second->sockfd, data.data(), data.size());                    
-                        iter->second->sendqueue.pop_front();
-                    }
-                    iter->second->sendmutex.unlock();
-                }
-
+                perror("recvfrom error");
+                break;
             }        
+            std::string clientip = inet_ntoa(client_addr.sin_addr);
+            int clientport = ntohs(client_addr.sin_port);
+//            std::cout << "recved from " << buf<< ret << std::endl;
+
+            if( inst->recv_callback )
+                inst->recv_callback(inst, buffer, ret, clientip.c_str(), clientport, inst->userdata);
         }
     }
 
@@ -313,7 +178,7 @@ int udp_select_server_eventloop(void* handle)
 }
 
 ////////////////////////////////////////////////////////
-void* udp_select_server_new(const char* localip, int localport, on_connect_callback connectcallback, on_close_callback closecallback, void* userdata)
+void* udp_select_server_new(const char* localip, int localport, on_recv_callback recv_callback, void* userdata)
 {
 #ifdef _WIN32
     WSADATA wsaData;
@@ -325,8 +190,7 @@ void* udp_select_server_new(const char* localip, int localport, on_connect_callb
 
     inst->localip = localip;
     inst->localport = localport;
-    inst->connectcallback = connectcallback;
-    inst->closecallback = closecallback;
+    inst->recv_callback = recv_callback;
     inst->userdata = userdata;
 
     inst->threadeventloop = std::thread(udp_select_server_eventloop, (void*)inst);
