@@ -7,10 +7,7 @@
 
 int sendfile(const char* filepath)
 {
-    int clientport = 0;
-    printf(" clientport = %d \n", clientport);
-
-    void* udphandle = udp_client_new("", clientport, -1, 0);
+    void* udphandle = udp_client_new("127.0.0.1", 11011, -1, 0);
     if( !udphandle )
     {
       printf("udp_client_new error \n");
@@ -18,7 +15,7 @@ int sendfile(const char* filepath)
     }
 
     ////////////////////////////////////////////////
-    void *muxerhandle = muxer_alloc("AAC");
+    void *muxerhandle = muxer_alloc("264");
     void *framerhandle = demuxer_alloc(filepath);
 
     while( 1 )
@@ -74,7 +71,7 @@ int sendfile(const char* filepath)
 
 int main()
 {
-	sendfile("test.264");
+	sendfile("D:/test.264");
 	
 	return 0;
 }

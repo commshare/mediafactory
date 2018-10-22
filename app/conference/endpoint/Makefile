@@ -19,8 +19,8 @@ ifeq ($(OS),Windows_NT)
 	LIBS = -lws2_32
 endif
 
-service: $(OBJS)
+endpoint: $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $(OBJS) $(LIBS) 
 
 clean:
-	rm -rf $(OBJS) service
+	rm -rf $(OBJS) endpoint

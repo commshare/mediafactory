@@ -36,10 +36,15 @@ void* udp_client_new(const char * server,int serverPort, int localport, int loca
     //向系统注册，通知系统建立一个通信端口  
     //AF_INET表示使用IPv4协议  
     //SOCK_STREAM表示使用TCP协议  
-    if( localfd >= 0 )
+    if( localfd > 0 )
         sockfd = localfd;
     else
     {
+#ifdef _WIN32
+    WSADATA wsaData;
+    WSAStartup(MAKEWORD(2, 2), &wsaData);
+#endif  /*  WIN32  */
+
         if((sockfd=socket(AF_INET,SOCK_DGRAM,0))<0){  
             perror("Init socket error!");  
             return NULL;  
