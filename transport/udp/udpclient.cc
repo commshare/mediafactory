@@ -1,13 +1,19 @@
+#ifdef _WIN32
+    #include <Winsock2.h>
+#else
+    #include   <sys/socket.h>     
+    #include   <netdb.h>     
+    #include   <netinet/in.h>  
+    #include   <arpa/inet.h>  
+#endif
+
 #include   <sys/stat.h>     
 #include   <sys/types.h>     
-#include   <sys/socket.h>     
+
 #include   <stdio.h>     
 #include   <malloc.h>     
-#include   <netdb.h>     
 #include   <fcntl.h>  
 #include   <unistd.h>  
-#include   <netinet/in.h>  
-#include   <arpa/inet.h>  
 #include  <string.h>
 #include    <errno.h>
 
@@ -43,7 +49,7 @@ void* udp_client_new(const char * server,int serverPort, int localport, int loca
     if( localport >= 0 )
     {
         struct sockaddr_in lcl_addr;
-        bzero(&lcl_addr,sizeof(lcl_addr));
+        memset(&lcl_addr, 0, sizeof(lcl_addr));
         lcl_addr.sin_family = AF_INET;
         lcl_addr.sin_addr.s_addr = htons(INADDR_ANY);
         lcl_addr.sin_port = htons(localport);
@@ -55,7 +61,7 @@ void* udp_client_new(const char * server,int serverPort, int localport, int loca
         }
     }
 
-    bzero(&addr,sizeof(addr));  
+    memset(&addr, 0, sizeof(addr));  
     addr.sin_family = AF_INET;  
     addr.sin_port = htons(serverPort);  
     addr.sin_addr.s_addr = inet_addr(server);//按IP初始化  

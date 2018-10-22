@@ -5,9 +5,13 @@
 #include <unistd.h>  
 #include <errno.h>
 
-#include <sys/socket.h>  
-#include <netinet/in.h>  
-#include <arpa/inet.h>  
+#ifdef _WIN32
+    #include <winsock2.h>
+#else
+    #include <sys/socket.h>  
+    #include <netinet/in.h>  
+    #include <arpa/inet.h>  
+#endif
 
 #include <string>
 #include "rtph264.h"  

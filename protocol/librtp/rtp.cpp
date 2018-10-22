@@ -5,9 +5,13 @@
 #include <unistd.h>  
 #include <errno.h>
 
-#include <sys/socket.h>  
-#include <netinet/in.h>  
-#include <arpa/inet.h>  
+#ifdef _WIN32
+    #include <winsock2.h>
+#else
+    #include <sys/socket.h>  
+    #include <netinet/in.h>  
+    #include <arpa/inet.h>  
+#endif
 
 #include "rtp.h"
 
@@ -23,7 +27,7 @@ int get_local_rtp_rtcp_port(int *rtp_sock, int *rtp_port, int *rtcp_sock, int *r
         }
 
         struct sockaddr_in lcl_addr;
-        bzero(&lcl_addr,sizeof(lcl_addr));
+        memset(&lcl_addr, 0, sizeof(lcl_addr));
         lcl_addr.sin_family = AF_INET;
         lcl_addr.sin_addr.s_addr = htons(INADDR_ANY);
         lcl_addr.sin_port = htons(i);
