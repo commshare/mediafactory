@@ -1,5 +1,5 @@
-#ifndef __TCP_CLIENT__
-#define __TCP_CLIENT__
+#ifndef __UDP_CLIENT__
+#define __UDP_CLIENT__
 
 #include <unistd.h>
 #include <stdio.h>

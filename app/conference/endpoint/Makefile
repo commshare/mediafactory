@@ -8,7 +8,7 @@ OBJS = ../../../protocol/librtp/rtph264.o \
 		../../../file/libpcm/pcmdemux.o \
 		../../../file/libh26x/spspps.o \
 		../../../file/libaac/aacdemux.o \
-		../../../transport/udp/udpclient.o \
+		../../../transport/udp/udpclientex.o \
 		demuxer.o \
 		muxer.o \
 		main.o
