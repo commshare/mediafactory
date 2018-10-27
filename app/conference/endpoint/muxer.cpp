@@ -3,9 +3,9 @@
 #include <string>
 
 #include "muxer.h"
-#include "../../../protocol/librtp/rtph264.h"
-#include "../../../protocol/librtp/rtpaac.h"
-#include "../../../protocol/librtp/rtpraw.h"
+#include "../../../protocol/librtp/rtpmux_h264.h"
+#include "../../../protocol/librtp/rtpmux_aac.h"
+#include "../../../protocol/librtp/rtpmux_raw.h"
 
 struct muxer_tag_t
 {

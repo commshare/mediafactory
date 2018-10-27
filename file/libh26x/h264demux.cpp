@@ -100,6 +100,9 @@ int H264ReadData(void* handle)
 
     desc->fs.read(desc->buffer, sizeof(desc->buffer));
     int length = desc->fs.gcount();
+//    printf("H264ReadData bufferlength = %u, read length=%u \n", 
+//            sizeof(desc->buffer), length);
+
     if( length <= 0 )
     {
         printf("seek file to the beginning \n");
@@ -195,7 +198,7 @@ int _GetFrame(void* handle, const char **frame, int *length)
 void* H264Demux_Init(const char* filepath, int circleread) 
 {
     H264FileDesc_t* desc = new H264FileDesc_t;
-    desc->fs.open(filepath);
+    desc->fs.open(filepath, std::ios::binary|std::ios::in);
     if( !desc->fs.is_open() )
     {
         printf("file is not opened \n");
@@ -245,6 +248,7 @@ int H264Demux_GetFrame(void* handle, const char **frame, int *length)
         return 0;
     }
 
+//    printf("databuffer size = %d \n", desc->databuffer.size());
     return _GetFrame(handle, frame, length);
 }
 

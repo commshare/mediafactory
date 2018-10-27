@@ -1,7 +1,7 @@
 CXX = g++
-OBJS = ../../../protocol/librtp/rtph264.o \
-		../../../protocol/librtp/rtpaac.o \
-		../../../protocol/librtp/rtpraw.o \
+OBJS = ../../../protocol/librtp/rtpmux_h264.o \
+		../../../protocol/librtp/rtpmux_aac.o \
+		../../../protocol/librtp/rtpmux_raw.o \
 		../../../protocol/librtp/rtp.o \
 		../../../protocol/librtsp/rtspdemux.o \
 		../../../file/libh26x/h264demux.o \

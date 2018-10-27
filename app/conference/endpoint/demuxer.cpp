@@ -52,11 +52,11 @@ int h264framer_getframe(void* handle, const char** frame, int *length)
     }
 
     int frametype = h264frame[4]&0x1f;
-/*
+
     printf("frameinfo:%u %u %u %u %u frametype:%d framelength:%d \n", 
           h264frame[0], h264frame[1], h264frame[2], h264frame[3],h264frame[4], 
           frametype, framelength);
-*/
+
     if( frametype == 5 )
     {
         H264Configuration_t config;

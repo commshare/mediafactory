@@ -1,5 +1,5 @@
-#ifndef __RTPAAC_h__
-#define __RTPAAC_h__
+#ifndef __RTPMUX_AAC_h__
+#define __RTPMUX_AAC_h__
 
 #include <stdio.h>  
 #include <stdlib.h>  

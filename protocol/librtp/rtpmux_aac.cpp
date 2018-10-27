@@ -14,7 +14,7 @@
 #endif
 
 #include <string>
-#include "rtpraw.h"  
+#include "rtpmux_aac.h"  
 
 typedef struct
 {
@@ -27,13 +27,23 @@ typedef struct
     uint32_t timestamp_increse;
     uint32_t timestamp_current;
     uint32_t rtp_ssrc;
-}rtp_raw_mux_desc_t;
+}rtp_aac_mux_desc_t;
+
+#pragma pack(push,1)
+
+typedef struct {  
+    //byte 0  
+    uint16_t headerlength;
+    uint16_t payloadlength;//high 13bit is payloadlength, low 3bit is 0
+} AU_HEADER; /**//* 1 BYTES */  
+
+#pragma pack(pop)
 
 ////////////////////////////////////////////////////////
-void* rtpmux_raw_alloc(unsigned long ssrc)
+void* rtpmux_aac_alloc(unsigned long ssrc)
 {
-    rtp_raw_mux_desc_t* handle = new rtp_raw_mux_desc_t;
-    handle->packet_length = sizeof(RTP_FIXED_HEADER) + MAX_RTP_BODY_LENGTH;//1460;
+    rtp_aac_mux_desc_t* handle = new rtp_aac_mux_desc_t;
+    handle->packet_length = sizeof(RTP_FIXED_HEADER) + sizeof(AU_HEADER) + MAX_RTP_BODY_LENGTH;//1460;
     handle->last_packet_length = 0;
     handle->sequence_number = 0;
     handle->timestamp_increse = 90000/25;
@@ -43,18 +53,23 @@ void* rtpmux_raw_alloc(unsigned long ssrc)
     return (void*)handle;
 }
 
-int rtpmux_raw_setframe(void* handle, int streamtype, const char* frame_buffer, int frame_length)
+int rtpmux_aac_setframe(void* handle, const char* frame_buffer, int frame_length)
 {
-    rtp_raw_mux_desc_t* rtp_mux = (rtp_raw_mux_desc_t*)handle;
+    rtp_aac_mux_desc_t* rtp_mux = (rtp_aac_mux_desc_t*)handle;
     rtp_mux->rtp_buffer.clear();
 
    //设置RTP HEADER，  
     RTP_FIXED_HEADER rtp_hdr;      
     memset(&rtp_hdr,0,sizeof(rtp_hdr));  
-    rtp_hdr.payload     = streamtype;  //负载类型号，  
+    rtp_hdr.payload     = AAC;  //负载类型号，  
     rtp_hdr.version     = 2;  //版本号，此版本固定为2  
     rtp_hdr.ssrc     = htonl(rtp_mux->rtp_ssrc);    //随机指定为10，并且在本RTP会话中全局唯一  
     
+    AU_HEADER auheader;
+    auheader.headerlength = htons(0x10);//header length is fixed as 16bit
+
+    frame_length -= 7;
+    frame_buffer += 7;
     //  当一个NALU小于1400字节的时候，采用一个单RTP包发送  
     if(frame_length <= MAX_RTP_BODY_LENGTH)  
     {
@@ -67,12 +82,15 @@ int rtpmux_raw_setframe(void* handle, int streamtype, const char* frame_buffer, 
 
         rtp_mux->rtp_buffer.append((char*)&rtp_hdr, sizeof(rtp_hdr));
 
+        auheader.payloadlength = htons(frame_length << 3);
+        rtp_mux->rtp_buffer.append((char*)&auheader, sizeof(auheader));
+
 //        printf("sizeof(rtp_hdr)=%d %d \n", sizeof(rtp_hdr), rtp_mux->rtp_buffer.size());
         //NAL单元的第一字节和RTP荷载头第一个字节重合
         rtp_mux->rtp_buffer.append(frame_buffer, frame_length);
 
         rtp_mux->packet_count = 1;
-        rtp_mux->last_packet_length = sizeof(rtp_hdr) + frame_length;
+        rtp_mux->last_packet_length = frame_length + sizeof(rtp_hdr) + sizeof(auheader);
     }
     else
     {
@@ -89,8 +107,11 @@ int rtpmux_raw_setframe(void* handle, int streamtype, const char* frame_buffer, 
                 rtp_hdr.marker = 1;  
                 rtp_mux->rtp_buffer.append((char*)&rtp_hdr, sizeof(rtp_hdr));
 
+                auheader.payloadlength = htons(frame_length<<3);
+                rtp_mux->rtp_buffer.append((char*)&auheader, sizeof(auheader));
+
                 rtp_mux->rtp_buffer.append(frame_buffer, frame_length);
-                rtp_mux->last_packet_length = sizeof(rtp_hdr) + frame_length;
+                rtp_mux->last_packet_length = sizeof(rtp_hdr) + sizeof(auheader) + frame_length;
             }  
             //既不是第一个分片，也不是最后一个分片的处理。  
             else if(frame_length > MAX_RTP_BODY_LENGTH)  
@@ -98,6 +119,9 @@ int rtpmux_raw_setframe(void* handle, int streamtype, const char* frame_buffer, 
                 //设置rtp M 位；  
                 rtp_hdr.marker = 0;  
                 rtp_mux->rtp_buffer.append((char*)&rtp_hdr, sizeof(rtp_hdr));
+
+                auheader.payloadlength = htons(MAX_RTP_BODY_LENGTH<<3);
+                rtp_mux->rtp_buffer.append((char*)&auheader, sizeof(auheader));
 
                 rtp_mux->rtp_buffer.append(frame_buffer, MAX_RTP_BODY_LENGTH);
             }
@@ -112,10 +136,10 @@ int rtpmux_raw_setframe(void* handle, int streamtype, const char* frame_buffer, 
     return 0;    
 }
 
-int rtpmux_raw_getpacket(void* handle, const char **rtp_buffer, int *rtp_packet_length,
+int rtpmux_aac_getpacket(void* handle, const char **rtp_buffer, int *rtp_packet_length,
             int *rtp_last_packet_length, int *rtp_packet_count)
 {
-    rtp_raw_mux_desc_t* rtp_mux = (rtp_raw_mux_desc_t*)handle;
+    rtp_aac_mux_desc_t* rtp_mux = (rtp_aac_mux_desc_t*)handle;
     *rtp_buffer = rtp_mux->rtp_buffer.data();
     *rtp_packet_length = rtp_mux->packet_length;
     *rtp_last_packet_length = rtp_mux->last_packet_length;
@@ -124,9 +148,9 @@ int rtpmux_raw_getpacket(void* handle, const char **rtp_buffer, int *rtp_packet_
     return 0;
 }
 
-int rtpmux_raw_free(void* handle)
+int rtpmux_aac_free(void* handle)
 {
-    rtp_raw_mux_desc_t* rtp_mux = (rtp_raw_mux_desc_t*)handle;
+    rtp_aac_mux_desc_t* rtp_mux = (rtp_aac_mux_desc_t*)handle;
     delete rtp_mux;
     return 0;
 }

@@ -1,7 +1,7 @@
 #ifndef __RTP_H__
 #define __RTP_H__
              
-#include <inttypes.h>
+#include <stdint.h>
 
 #define MAX_RTP_BODY_LENGTH     1440    
 #define H264                    96  

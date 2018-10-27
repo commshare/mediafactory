@@ -1,5 +1,5 @@
-#ifndef __RTPH264_h__
-#define __RTPH264_h__
+#ifndef __RTPMUX_H264_h__
+#define __RTPMUX_H264_h__
 
 #include <stdio.h>  
 #include <stdlib.h>  

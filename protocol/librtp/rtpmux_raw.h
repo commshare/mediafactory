@@ -1,5 +1,5 @@
-#ifndef __RTPRAW_h__
-#define __RTPRAW_h__
+#ifndef __RTPMUX_RAW_h__
+#define __RTPMUX_RAW_h__
 
 #include <stdio.h>  
 #include <stdlib.h>  

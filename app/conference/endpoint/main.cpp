@@ -9,7 +9,6 @@ int sendfile(const char* filepath)
 {
     const char* remoteip = "192.168.0.100";//"127.0.0.1";
     int remoteport = 11011;
-        printf("======\n");
     void* udphandle = udp_clientex_new(-1, 0);
 //    void* udphandle = udp_client_new("127.0.0.1", 11011, -1, 0);
     if( !udphandle )
@@ -18,7 +17,6 @@ int sendfile(const char* filepath)
       return NULL;
     }
 
-        printf("======\n");
     ////////////////////////////////////////////////
     void *muxerhandle = muxer_alloc("264");
     void *framerhandle = demuxer_alloc(filepath);
@@ -33,7 +31,6 @@ int sendfile(const char* filepath)
             printf("framer_getframe error\n");
             break;
         }
-        printf("======1\n");
 
         muxer_setframe(muxerhandle, h264frame, framelength);
 
@@ -64,7 +61,6 @@ int sendfile(const char* filepath)
             rtp_buffer += rtp_packet_length;
         }
 
-        printf("aaaaaaaaaaaaa\n");
         if( ret < 0 )
             break;
         usleep(1000 * 40);
@@ -82,7 +78,7 @@ int sendfile(const char* filepath)
 int main()
 {
         printf("======\n");
-	sendfile("/test.264");
+	sendfile("D:/test1.264");
 	
 	return 0;
 }
