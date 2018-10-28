@@ -1,6 +1,5 @@
 CXX = g++
 OBJS = ../../../protocol/librtp/rtpmux_h264.o \
-		../../../protocol/librtp/rtpdemux_h264.o \
 		../../../protocol/librtp/rtpmux_aac.o \
 		../../../protocol/librtp/rtpmux_raw.o \
 		../../../protocol/librtp/rtp.o \
@@ -9,8 +8,8 @@ OBJS = ../../../protocol/librtp/rtpmux_h264.o \
 		../../../file/libaac/aacdemux.o \
 		../../../transport/udp/udpclient.o \
 		../../../transport/udp/udpselectserver.o \
-		../../../util/filewritter.o \
-		muxer.o \
+		../../../util/thread.o \
+		confmanager.o \
 		main.o
 
 CXXFLAGS = -g -W -Wall -std=c++11 -lpthread -Ithirdparty/lib/libst

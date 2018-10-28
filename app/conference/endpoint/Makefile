@@ -1,5 +1,6 @@
 CXX = g++
 OBJS = ../../../protocol/librtp/rtpmux_h264.o \
+		../../../protocol/librtp/rtpdemux_h264.o \
 		../../../protocol/librtp/rtpmux_aac.o \
 		../../../protocol/librtp/rtpmux_raw.o \
 		../../../protocol/librtp/rtp.o \
@@ -9,6 +10,8 @@ OBJS = ../../../protocol/librtp/rtpmux_h264.o \
 		../../../file/libh26x/spspps.o \
 		../../../file/libaac/aacdemux.o \
 		../../../transport/udp/udpclientex.o \
+		../../../util/thread.o \
+		../../../util/filewritter.o \
 		demuxer.o \
 		muxer.o \
 		main.o

@@ -5,15 +5,11 @@
 #include <stdio.h>
 
 typedef int (*on_recv_callback)(void* handle, char* data, int length, 
-			const char* remoteip, int remoteport, void* userdata);
+			int localfd, char* remoteip, int remoteport, void* userdata);
 
 void* udp_select_server_new(const char* localip, int localport, on_recv_callback recv_callback, void* userdata);
 
-int udp_select_server_read(void* handle, int clientid, char* data, int length);
-
-int udp_select_server_write(void* handle, int clientid, const char* data, int length);
-
-int udp_select_server_close(void* handle, int clientid);
+int udp_select_server_write(int localfd, const char* data, int length, char* remoteip, int remoteport);
 
 int udp_select_server_free(void* handle);
 

@@ -153,6 +153,7 @@ int udp_select_server_eventloop(void* handle)
     
     while( 1 ) 
     {
+        usleep(1000 * 1);
         int nfds = select_fds(handle);
 
         if( fdread_is_selected(handle, listenfd) )
@@ -170,7 +171,7 @@ int udp_select_server_eventloop(void* handle)
 //            std::cout << "recved from " << buf<< ret << std::endl;
 
             if( inst->recv_callback )
-                inst->recv_callback(inst, buffer, ret, clientip.c_str(), clientport, inst->userdata);
+                inst->recv_callback(inst, buffer, ret, listenfd, (char*)clientip.c_str(), clientport, inst->userdata);
         }
     }
 
@@ -198,61 +199,22 @@ void* udp_select_server_new(const char* localip, int localport, on_recv_callback
     return inst;
 }
 
-int udp_select_server_read(void* handle, int clientid, char* data, int length)
+int udp_select_server_write(int localfd, const char* data, int length, char* remoteip, int remoteport)
 {
-    udpserverdesc_t * inst = (udpserverdesc_t*)handle;
+    struct    sockaddr_in    addr;  
+    memset(&addr, 0, sizeof(addr));  
+    addr.sin_family = AF_INET;  
+    addr.sin_port = htons(remoteport);  
+    addr.sin_addr.s_addr = inet_addr(remoteip);//按IP初始化  
 
-    UDPCLIENTMAP::iterator iter = inst->clients.find(clientid);
-    if( iter == inst->clients.end() )
-        return -1;
-
-    int reallength = 0;
-    iter->second->recvmutex.lock();
-    if( iter->second->recvqueue.size() <= 0 )
+    int addr_size = sizeof(addr);  
+    int sendSize=sendto(localfd, data, length, 0, (const sockaddr*)&addr, addr_size);
+    if(  sendSize < 0)
     {
-        reallength = 0;
-    }
-    else
-    {
-        std::string frontdata = iter->second->recvqueue.front();
-        reallength = frontdata.size();
-        memcpy(data, frontdata.data(), frontdata.size());
-        iter->second->recvqueue.pop_front();
-    }
-    iter->second->recvmutex.unlock();
-
-    return reallength;
-}
-
-int udp_select_server_write(void* handle, int clientid, const char* data, int length)
-{
-    udpserverdesc_t * inst = (udpserverdesc_t*)handle;
-
-    UDPCLIENTMAP::iterator iter = inst->clients.find(clientid);
-    if( iter == inst->clients.end() )
+        perror("udp_select_server_write error");
         return -1;
-
-    iter->second->sendmutex.lock();
-    iter->second->sendqueue.push_back(std::string(data, length));
-    iter->second->sendmutex.unlock();
-
-    return 0;
-}
-
-int udp_select_server_close(void* handle, int clientid)
-{
-    udpserverdesc_t * inst = (udpserverdesc_t*)handle;
-
-    UDPCLIENTMAP::iterator iter = inst->clients.find(clientid);
-    if( iter == inst->clients.end() )
-        return -1;
-
-    close(clientid);
-    udpclientdesc_t* client = iter->second;
-    delete client;
-    inst->clients.erase(iter);
-
-    return 0;
+    } else 
+        return sendSize;
 }
 
 int udp_select_server_free(void* handle)

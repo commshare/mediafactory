@@ -20,12 +20,29 @@
 
 #include "udpclientex.h"
 
-struct tcpclient_t {
+struct udpclientex_t {
     int sockfd;
 
     std::string remoteip;
 };
 
+int selectread_fd(int fd)
+{
+    fd_set fdread;
+    FD_ZERO (&fdread);
+    
+    FD_SET (fd, &fdread);
+
+    struct timeval tout;
+    tout.tv_sec = 0;
+    tout.tv_usec = 1000 * 500;
+    int tag = select (2, &fdread, NULL, NULL, &tout);
+    if (tag == 0)
+        printf("selectread_fd: select wait timeout\n");
+
+    return tag;
+}
+/////////////////////////////////////////
 /************************************************************ 
  * 连接SOCKET服务器，如果出错返回-1，否则返回socket处理代码 
  * server：服务器地址(域名或者IP),serverport：端口 
@@ -66,7 +83,7 @@ void* udp_clientex_new(int localport, int localfd)
         }
     }
 
-    tcpclient_t * client = new tcpclient_t;
+    udpclientex_t * client = new udpclientex_t;
     if( !client ){
         close(sockfd);
         return NULL;
@@ -82,7 +99,7 @@ void* udp_clientex_new(int localport, int localfd)
 int udp_clientex_write(void* handle, const char * sendBuff, int length, 
         const char* remoteip, int remoteport)  
 {  
-    tcpclient_t * client = (tcpclient_t*)handle;
+    udpclientex_t * client = (udpclientex_t*)handle;
 
     struct    sockaddr_in    addr;  
     memset(&addr, 0, sizeof(addr));  
@@ -101,6 +118,12 @@ int udp_clientex_write(void* handle, const char * sendBuff, int length,
         return sendSize;  
 }  
 
+int udp_clientex_selectread(void* handle)
+{
+    udpclientex_t * client = (udpclientex_t*)handle;
+    return selectread_fd(client->sockfd);
+}
+
 /**************************************************************** 
  *接受消息，如果出错返回NULL，否则返回接受字符串的指针(动态分配，注意释放) 
  *sockfd：socket标识 
@@ -108,7 +131,7 @@ int udp_clientex_write(void* handle, const char * sendBuff, int length,
 int udp_clientex_read(void* handle, char* buffer, int length,
     const char** remoteip, int *remoteport)
 {
-    tcpclient_t * client = (tcpclient_t*)handle;
+    udpclientex_t * client = (udpclientex_t*)handle;
 
     struct sockaddr_in addr;  
     int addr_size = sizeof(addr);  
@@ -130,7 +153,7 @@ int udp_clientex_read(void* handle, char* buffer, int length,
  * **********************************************/  
 int udp_clientex_free(void* handle)  
 {  
-    tcpclient_t* client = (tcpclient_t*)handle;
+    udpclientex_t* client = (udpclientex_t*)handle;
 
     close(client->sockfd);  
     delete client;
