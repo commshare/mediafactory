@@ -1,4 +1,19 @@
-CXX = g++
+CC  = gcc
+CPP = g++
+
+########################################
+CFLAGS = -fPIC -lpthread
+CPPFLAGS = -fPIC -g -W -Wall -std=c++11
+
+LINK_FLAGS = -w -g -D__STDC_CONSTANT_MACROS
+LIBS =  -lstdc++
+ifeq ($(OS),Windows_NT)
+	LIBS = -lws2_32
+endif
+#########################################################
+
+PROGRAM = endpoint
+
 OBJS = ../../../protocol/librtp/rtpmux_h264.o \
 		../../../protocol/librtp/rtpdemux_h264.o \
 		../../../protocol/librtp/rtpmux_aac.o \
@@ -16,14 +31,32 @@ OBJS = ../../../protocol/librtp/rtpmux_h264.o \
 		muxer.o \
 		main.o
 
-CXXFLAGS = -g -W -Wall -std=c++11 -lpthread -Ithirdparty/lib/libst
-LIBS = -lstdc++
-ifeq ($(OS),Windows_NT)
-	LIBS = -lws2_32
-endif
-
-endpoint: $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $(OBJS) $(LIBS) 
+$(PROGRAM): $(OBJS)
+	$(CPP) $(LINK_FLAGS) -o $@  $(OBJS) $(LIBS) 
 
 clean:
-	rm -rf $(OBJS) endpoint
+	clear
+	rm -rf $(OBJS) *.o $(PROGRAM)
+
+#$(OBJS):%.o :%.c  先用$(OBJS)中的一项，比如foo.o: %.o : %.c  含义为:试着用%.o匹配foo.o。如果成功%就等于foo。如果不成功，  
+# Make就会警告，然后。给foo.o添加依赖文件foo.c(用foo替换了%.c里的%)  
+# 也可以不要下面的这个生成规则，因为下面的 include $(DEF)  就隐含了。此处为了明了，易懂。故留着  
+#compile c source file
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+%.o: %.C
+	$(CC) $(CFLAGS) -c $< -o $@
+
+#compile c++ source file
+%.o: %.cpp
+	$(CPP) $(CPPFLAGS) -c $< -o $@
+%.o: %.cp
+	$(CPP) $(CPPFLAGS) -c $< -o $@
+%.o: %.CPP
+	$(CPP) $(CPPFLAGS) -c $< -o $@
+%.o: %.cc
+	$(CPP) $(CPPFLAGS) -c $< -o $@
+%.o: %.cxx
+	$(CPP) $(CPPFLAGS) -c $< -o $@
+%.o: %.c++
+	$(CPP) $(CPPFLAGS) -c $< -o $@
