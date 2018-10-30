@@ -23,9 +23,26 @@ OBJS = ../../../protocol/librtp/rtpmux_h264.o \
 		../../../file/libaac/aacdemux.o \
 		../../../transport/udp/udpclient.o \
 		../../../transport/udp/udpselectserver.o \
-		../../../util/thread.o \
-		confmanager.o \
-		main.o
+		../../../util/thread.o 
+
+# The directories in which source files reside.  
+# At least one path should be specified.  
+# SRCDIRS   := .        # current directory  
+SRCDIRS   :=  .
+# The source file types (headers excluded).  
+# At least one type should be specified.  
+# The valid suffixes are among of .c, .C, .cc, .cpp, .CPP, .c++, .cp, or .cxx.  
+# SRCEXTS   := .c      # C program  
+# SRCEXTS   := .cpp    # C++ program  
+# SRCEXTS   := .c .cpp # C/C++ program  
+SRCEXTS   :=  .cpp
+
+ifneq ($(SRCDIRS),)
+ifneq ($(SRCEXTS),)
+	SOURCES = $(foreach d,$(SRCDIRS),$(wildcard $(addprefix $(d)/*,$(SRCEXTS))))  
+	OBJS += $(foreach x,$(SRCEXTS), $(patsubst %$(x),%.o,$(filter %$(x),$(SOURCES))))  
+endif
+endif
 
 $(PROGRAM): $(OBJS)
 	$(CPP) $(LINK_FLAGS) -o $@  $(OBJS) $(LIBS) 
