@@ -23,7 +23,7 @@ struct url_demux_tag_t
     std::string body;
 };
 
-int parse_internal(void* inst, char* urlcontent, int length)
+static int parse_internal(void* inst, char* urlcontent, int length)
 {
     url_demux_tag_t* obj = (url_demux_tag_t*)inst;
     if( !obj || !request )
@@ -90,7 +90,7 @@ int parse_internal(void* inst, char* urlcontent, int length)
     return 0;
 }
 
-int parse_get_value(void* inst, char** headlinepart1, char** headlinepart2, char** headlinepart3, 
+static int parse_get_value(void* inst, char** headlinepart1, char** headlinepart2, char** headlinepart3, 
 				url_demux_header **headers, int *headercount, char** body, int *bodylength)
 {
     url_demux_tag_t* obj = (url_demux_tag_t*)inst;
@@ -175,7 +175,7 @@ int url_demux_response(void* inst, char* response, int length, char** version, c
     return 0;
 }
 
-int url_mux_free(void* inst)
+int url_demux_free(void* inst)
 {
     url_demux_tag_t* obj = (url_demux_tag_t*)inst;
     if( !obj )
