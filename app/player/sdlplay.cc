@@ -1,3 +1,8 @@
+#include <thread>
+
+#include <stdio.h>
+#include <unistd.h>
+
 #include "SDL2/SDL.h"
 #include "sdlplay.h"
 
@@ -6,16 +11,48 @@ struct SDL2Desc_t
     SDL_Window *screen;   
     SDL_Renderer* sdlRenderer;  
     SDL_Texture* sdlTexture;  
-    SDL_Rect sdlRect;  
+    SDL_Rect sdlRect; 
 };
 
+int sdl_pollevent(SDL2Desc_t *inst)
+{
+	SDL_Event event;
+	SDL_PollEvent(&event);
+
+	if (event.type == SDL_KEYDOWN) 
+	{
+		switch (event.key.keysym.sym) 
+		{
+		case SDLK_f:
+			/* press key 'f' to toggle fullscreen */			
+/*
+			if (flags&SDL_WINDOW_FULLSCREEN_DESKTOP)
+				flags &=
+					~SDL_WINDOW_FULLSCREEN_DESKTOP;
+			else
+				flags |=
+					SDL_WINDOW_FULLSCREEN_DESKTOP;
+
+			SDL_SetWindowFullscreen(inst->screen, flags);
+*/
+			break;
+
+		default:
+			break;
+		}
+	}
+
+	return 0;
+}
+
+/////////////////////////////////////////////////////////
 void* sdlplay_open(void* parenthwnd)
 {
-	//���ʹ�ñ��ش��ڣ���Ҫ���ô��ھ��
+	//Èç¹ûÊ¹ÓÃ±¾µØ´°¿Ú£¬ÐèÒªÉèÖÃ´°¿Ú¾ä±ú
 /*	if( parenthwnd )
 	{
 		char variable[256]; 
-		sprintf(variable,"SDL_WINDOWID=0x%1x",parenthwnd); // ��ʽ���ַ��� 
+		sprintf(variable,"SDL_WINDOWID=0x%1x",parenthwnd); // ¸ñÊ½»¯×Ö·û´® 
 		int ret = SDL_putenv(variable);  
 		if( ret != 0 )
 			return NULL;
@@ -26,6 +63,7 @@ void* sdlplay_open(void* parenthwnd)
 		return NULL;
 
 	SDL2Desc_t *inst = new SDL2Desc_t;
+
 	return inst;
 }
 
@@ -80,6 +118,7 @@ int sdlplay_set_audio(void* handle, int iSampleRate,int iChannels,void *pUserDat
 int sdlplay_display_yuv(void* handle, uint8_t* data[], int linesize[])
 {
 	SDL2Desc_t *inst = (SDL2Desc_t*)handle;
+	sdl_pollevent(inst);
 
     SDL_UpdateYUVTexture(inst->sdlTexture, &inst->sdlRect, data[0], linesize[0], 
 	    data[1], linesize[1], data[2], linesize[2]);  
@@ -94,6 +133,7 @@ int sdlplay_display_yuv(void* handle, uint8_t* data[], int linesize[])
 int sdlplay_display(void* handle, uint8_t* data[], int linesize[])
 {
 	SDL2Desc_t *inst = (SDL2Desc_t*)handle;
+	sdl_pollevent(inst);
 
     SDL_UpdateTexture(inst->sdlTexture, &inst->sdlRect, data, linesize[0]);
       
