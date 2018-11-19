@@ -68,7 +68,7 @@ int sdp_mux_get_buffer(void* inst, char** buffer, int *length)
     return 0;
 }
 
-int url_mux_flush_buffer(void* inst)
+int sdp_mux_flush_buffer(void* inst)
 {
     sdp_mux_tag_t* obj = (sdp_mux_tag_t*)inst;
     if( !obj )
@@ -79,7 +79,7 @@ int url_mux_flush_buffer(void* inst)
     return 0;
 }
 
-int url_mux_free(void* inst)
+int sdp_mux_free(void* inst)
 {
     sdp_mux_tag_t* obj = (sdp_mux_tag_t*)inst;
     if( !obj )
