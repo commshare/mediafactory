@@ -125,6 +125,9 @@ int ffmpegdemux_read(void* handle, ffmpegdemuxpacket_t *packet)
 {
 	ffmpegdemuxdesc_t *inst = (ffmpegdemuxdesc_t*)handle;
 
+	if( inst->packet.size > 0 )
+		av_free_packet(&inst->packet);
+	
 ////////////////////////////////////////////////////////////////////////////////////
 	if( av_read_frame(inst->pFormatCtx, &inst->packet) < 0 )
 		return -1;
