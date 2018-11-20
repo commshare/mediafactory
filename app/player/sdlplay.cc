@@ -107,7 +107,7 @@ int sdlplay_set_audio(void* handle, int iSampleRate,int iChannels,void *pUserDat
 	wanted_spec.samples = 1024;
 	if(SDL_OpenAudio(&wanted_spec, &spec) < 0)  
 	{  
-		fprintf(stderr, "SDL_OpenAudio: %s/n", SDL_GetError());  
+		printf("SDL_OpenAudio: %s/n", SDL_GetError());  
 		return -1;  
 	}  
 	SDL_PauseAudio(0);

@@ -154,7 +154,7 @@ double ffmpegdemux_getclock(void* handle, int streamid,int64_t pts)
 {
 	ffmpegdemuxdesc_t *inst = (ffmpegdemuxdesc_t*)handle;
 
-	return av_q2d(inst->pFormatCtx->streams[streamid]->time_base) * pts;
+	return fabs(av_q2d(inst->pFormatCtx->streams[streamid]->time_base) * pts);
 }
 
 int ffmpegdemux_decode(void *handle, int codecid, uint8_t *pBuffer, int dwBufsize, ffmpegdemuxframe_t *frame)

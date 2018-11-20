@@ -60,15 +60,16 @@ void AudioCallback(void *userdata, uint8_t *stream, int len)
 	uint8_t *pBuf=stream;
 	int length=len;
 	int iFilledSize=0;
+//	printf("AudioCallback len=%u\n",len);
 	while( length>0 )
 	{
 		pVideoState->audiomutex.lock();
 		if( !pVideoState->queueAudioFrame.empty() )
 		{
 			PACKETINFO *pPacket = &pVideoState->queueAudioFrame.front();
-			double dClock=-ffmpegdemux_getclock(pVideoState->demuxhandle, pPacket->streamid, pPacket->ipts);
+			double dClock=ffmpegdemux_getclock(pVideoState->demuxhandle, pPacket->streamid, pPacket->ipts);
 			pVideoState->lfAudioClock=dClock;
-			printf("Audio Clock=%lf %lf %d %d \n",pVideoState->lfAudioClock, dClock, pPacket->streamid, pPacket->ipts);
+//			printf("Audio Clock=%lf %lf %d %d \n",pVideoState->lfAudioClock, dClock, pPacket->streamid, pPacket->ipts);
 
 			int iPacketSize=pPacket->iSize-pPacket->iUsage;
 			int len1=length-iPacketSize;
@@ -87,9 +88,11 @@ void AudioCallback(void *userdata, uint8_t *stream, int len)
 		}
 		else
 		{
+//			printf("AudioCallback set zero \n");
 			memset(stream,0,len);
 		}
 		pVideoState->audiomutex.unlock();
+
 	}
 }
 
@@ -138,7 +141,7 @@ int VideoThread(void *arg)
 					}					
 				}
 
-				double dClock=-ffmpegdemux_getclock(pVideoState->demuxhandle, packet->streamid, packet->ipts);
+				double dClock=ffmpegdemux_getclock(pVideoState->demuxhandle, packet->streamid, packet->ipts);
 	//			printf("Video Clock=%lf %d %d \n",dClock, packet->streamid, packet->ipts);
 				pVideoState->lfVideoClock=dClock;
 
@@ -261,6 +264,7 @@ int player_play(void* handle, const char* url)
 			}
 		}
 
+//		usleep(10 * 1000);
 		usleep(1000 * 1000 / inst->fps);
 	}
 
