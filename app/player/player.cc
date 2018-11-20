@@ -13,6 +13,7 @@
 #include "player.h"
 
 #define AVCODEC_MAX_AUDIO_FRAME_SIZE 192000
+#define PLAYER_FRAMERATE_BASE 25
 
 struct PACKETINFO
 {
@@ -49,6 +50,8 @@ typedef struct
 	void* sdlhandle;
 	void* rescalehandle;
 	void* resamplehandle;
+
+	int fps;
 }playerdesc_t;
 
 void AudioCallback(void *userdata, uint8_t *stream, int len)
@@ -150,8 +153,20 @@ void* player_open()
 	inst->lfVideoClock=0.0;
 	inst->lfAudioClock=0.0;
 	inst->resamplehandle = inst->rescalehandle = NULL;
+	inst->fps = PLAYER_FRAMERATE_BASE;
 
 	return inst;
+}
+
+int player_set_speed(void* handle, float speed)
+{
+	playerdesc_t *inst = (playerdesc_t*)handle;
+
+	int fps = PLAYER_FRAMERATE_BASE * speed;
+	if( fps > 0 )
+		inst->fps = fps;
+
+	return 0;
 }
 
 int player_play(void* handle, const char* url)
@@ -252,7 +267,7 @@ int player_play(void* handle, const char* url)
 			}
 		}
 
-		usleep(10 * 1000);
+		usleep(1000 * 1000 / inst->fps);
 	}
 
 	//-------------------release resource
