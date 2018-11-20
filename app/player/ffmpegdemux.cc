@@ -212,6 +212,9 @@ int ffmpegdemux_close(void* handle)
 {
 	ffmpegdemuxdesc_t *inst = (ffmpegdemuxdesc_t*)handle;
 
+	if( inst->packet.size > 0 )
+		av_free_packet(&inst->packet);
+	
 	if( inst->pVideoCodecCtx )
 	{
 		avcodec_close(inst->pVideoCodecCtx);
