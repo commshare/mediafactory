@@ -103,7 +103,17 @@ int VideoThread(void *arg)
 
 	while( 1 )
 	{
-		if( fabs(pVideoState->lfVideoClock - pVideoState->lfAudioClock) * 1000 > 100 )
+		pVideoState->videomutex.lock();
+		int iVideoLen=pVideoState->queueVideoFrame.size();
+		pVideoState->videomutex.unlock();
+
+		pVideoState->audiomutex.lock();
+		int iAudioLen=pVideoState->queueAudioFrame.size();
+		pVideoState->audiomutex.unlock();
+
+		if( iVideoLen > 0 && 
+			iAudioLen > 0 && 
+			fabs(pVideoState->lfVideoClock - pVideoState->lfAudioClock) * 1000 > 100 )
 		{
 			printf("clock wait %lf %lf\n", pVideoState->lfVideoClock, pVideoState->lfAudioClock);
 			usleep(10 * 1000);
@@ -135,8 +145,6 @@ int VideoThread(void *arg)
 				scale_image(pVideoState->rescalehandle, frame.data, frame.linesize, &image);
 				sdlplay_display_yuv(pVideoState->sdlhandle, image.data, image.linesize);			
 			}
-
-
 			pVideoState->queueVideoFrame.pop_front();
 		}
 		pVideoState->videomutex.unlock();
@@ -190,8 +198,6 @@ int player_play(void* handle, const char* url)
 	}
 	inst->sdlhandle = sdlhandle;
 
-    inst->threadeventloop = std::thread(VideoThread, (void*)inst);
-
 /////////////////////////////////////////////////
 	ffmpegdemuxpacket_t packet; 
 	ffmpegdemuxframe_t frame;
@@ -200,26 +206,14 @@ int player_play(void* handle, const char* url)
 
 	while( 1 )
 	{
-		inst->videomutex.lock();
-		int iVideoLen=inst->queueVideoFrame.size();
-		inst->videomutex.unlock();
-
-		inst->audiomutex.lock();
-		int iAudioLen=inst->queueAudioFrame.size();
-		inst->audiomutex.unlock();
-
-		if( iVideoLen>5	&& iAudioLen>5 )
-		{
-			printf("audiolistsize=%d,videolistsize=%d\n",iAudioLen,iVideoLen);
-			usleep(100 * 1000 );
-			continue;
-		}
-
 		if( ffmpegdemux_read(demuxhandle, &packet) < 0 )
 			break;
 
 		if( packet.codec_type == 0 )
 		{
+			if( !inst->threadeventloop.native_handle() )
+			    inst->threadeventloop = std::thread(VideoThread, (void*)inst);
+
 			PACKETINFO info;
 			info.ipts=packet.pts;
 			memcpy(info.data, packet.data, packet.size);
