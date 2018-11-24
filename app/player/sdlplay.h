@@ -4,6 +4,7 @@
 typedef void (*sdlplay_audio_callback)(void *userdata, uint8_t *stream, int len);
 
 void* sdlplay_open(void* parenthwnd);
+int sdlplay_pollevent(void *handle);
 
 int sdlplay_set_video(void* handle, const char* windowtitle, int iWidth,int iHeight );
 

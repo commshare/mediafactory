@@ -9,6 +9,7 @@ struct ffmpegdemuxdesc_t
     AVFrame *pAudioFrame;  
     AVCodecContext *pVideoCodecCtx;  
     AVFrame *pVideoFrame;  
+    int streamcount;
 };
 
 /////////////////////////////////////////////
@@ -110,15 +111,29 @@ void* ffmpegdemux_open(const char* url)
     inst->pVideoFrame = inst->pAudioFrame = NULL;  
 
     int streamid = -1;
+	inst->streamcount = 0;
     inst->pVideoCodecCtx = AV_GetCodecContext(inst->pFormatCtx, AVMEDIA_TYPE_VIDEO, &streamid);
     if( inst->pVideoCodecCtx )
+    {
 	    inst->pVideoFrame = av_frame_alloc();  
+		inst->streamcount++;
+    }
 
     inst->pAudioCodecCtx = AV_GetCodecContext(inst->pFormatCtx, AVMEDIA_TYPE_AUDIO, &streamid);
     if( inst->pAudioCodecCtx )
+    {
 	    inst->pAudioFrame = av_frame_alloc();  
+		inst->streamcount++;
+    }
 
 	return inst;
+}
+
+int ffmpegdemux_getstreamcount(void* handle)
+{
+	ffmpegdemuxdesc_t *inst = (ffmpegdemuxdesc_t*)handle;
+
+	return inst->streamcount;
 }
 
 int ffmpegdemux_read(void* handle, ffmpegdemuxpacket_t *packet)
@@ -138,7 +153,11 @@ int ffmpegdemux_read(void* handle, ffmpegdemuxpacket_t *packet)
 	packet->stream_index = inst->packet.stream_index;
 
 	packet->codec_id = inst->pFormatCtx->streams[packet->stream_index]->codec->codec_id;
-
+/*
+	printf("ffmpegdemux_read:index:%u, num:%u, den:%u \n", packet->stream_index,
+		inst->pFormatCtx->streams[packet->stream_index]->r_frame_rate.num,
+		inst->pFormatCtx->streams[packet->stream_index]->r_frame_rate.den);
+*/
 	int codec_type = inst->pFormatCtx->streams[packet->stream_index]->codec->codec_type;
 	if( codec_type == AVMEDIA_TYPE_VIDEO )
 		packet->codec_type = 0;
@@ -196,8 +215,11 @@ int ffmpegdemux_decode(void *handle, int codecid, uint8_t *pBuffer, int dwBufsiz
         frame->info.sample.channels = inst->pAudioCodecCtx->channels;
         frame->info.sample.sample_fmt = inst->pAudioCodecCtx->sample_fmt;
         frame->info.sample.sample_rate = inst->pAudioCodecCtx->sample_rate;
-
-//        printf("ffmpegdec_decodea %d %d \n", inst->pAudioCodecCtx->sample_rate, inst->pAudioCodecCtx->channels);
+/*
+        printf("ffmpegdec_decodea %d %d %d\n", inst->pAudioCodecCtx->sample_rate, 
+        	inst->pAudioCodecCtx->channels,
+        	inst->pAudioFrame->nb_samples);
+*/
     }
     else
     {

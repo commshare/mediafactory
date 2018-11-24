@@ -12,6 +12,7 @@ struct SDL2Desc_t
     SDL_Renderer* sdlRenderer;  
     SDL_Texture* sdlTexture;  
     SDL_Rect sdlRect; 
+	SDL_AudioDeviceID audio_dev;
 };
 
 int sdl_pollevent(SDL2Desc_t *inst)
@@ -49,22 +50,31 @@ int sdl_pollevent(SDL2Desc_t *inst)
 void* sdlplay_open(void* parenthwnd)
 {
 	//Èç¹ûÊ¹ÓÃ±¾µØ´°¿Ú£¬ÐèÒªÉèÖÃ´°¿Ú¾ä±ú
-/*	if( parenthwnd )
+	if( parenthwnd )
 	{
 		char variable[256]; 
-		sprintf(variable,"SDL_WINDOWID=0x%1x",parenthwnd); // ¸ñÊ½»¯×Ö·û´® 
-		int ret = SDL_putenv(variable);  
+		sprintf(variable,"0x%1x",parenthwnd); // ¸ñÊ½»¯×Ö·û´® 
+		int ret = SDL_setenv("SDL_WINDOWID", variable, 1);  
 		if( ret != 0 )
 			return NULL;
 	}
-*/
-	int iReturn=SDL_Init(SDL_INIT_EVERYTHING);
+
+//    int flags = SDL_INIT_VIDEO | SDL_INIT_AUDIO;// | SDL_INIT_TIMER;
+    int flags = SDL_INIT_EVERYTHING;
+	int iReturn=SDL_Init(flags);
 	if( iReturn != 0 )
 		return NULL;
 
 	SDL2Desc_t *inst = new SDL2Desc_t;
+	inst->screen = NULL;
 
 	return inst;
+}
+
+int sdlplay_pollevent(void *handle)
+{
+	SDL2Desc_t *inst = (SDL2Desc_t*)handle;
+	return sdl_pollevent(inst);
 }
 
 int sdlplay_set_video(void* handle, const char* windowtitle, int iWidth,int iHeight)
@@ -74,11 +84,11 @@ int sdlplay_set_video(void* handle, const char* windowtitle, int iWidth,int iHei
 
     //SDL 2.0 Support for multiple windows  
     inst->screen = SDL_CreateWindow(windowtitle, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,  
-        iWidth, iHeight, SDL_WINDOW_OPENGL);    
+        iWidth, iHeight, SDL_WINDOW_RESIZABLE);//SDL_WINDOW_OPENGL);    
     if(!inst->screen) {    
         printf("SDL: could not create window - exiting:%s\n",SDL_GetError());    
         return -1;  
-    }  
+    }		
 
     inst->sdlRenderer = SDL_CreateRenderer(inst->screen, -1, 0);    
     //IYUV: Y + U + V  (3 planes)  
@@ -95,22 +105,24 @@ int sdlplay_set_video(void* handle, const char* windowtitle, int iWidth,int iHei
 
 int sdlplay_set_audio(void* handle, int iSampleRate,int iChannels,void *pUserData, sdlplay_audio_callback callback)
 {
+	SDL2Desc_t *inst = (SDL2Desc_t*)handle;
 	printf("SDL_InitializeAudio %d %d \n",iSampleRate, iChannels);
 
 	SDL_AudioSpec wanted_spec, spec;  
 	wanted_spec.freq = iSampleRate;  
 	wanted_spec.channels = iChannels;  
+	wanted_spec.samples = 1024;
 	wanted_spec.userdata = pUserData;  
 	wanted_spec.format = AUDIO_S16SYS;
 	wanted_spec.silence = 0;  
 	wanted_spec.callback = callback;  
-	wanted_spec.samples = 1024;
-	if(SDL_OpenAudio(&wanted_spec, &spec) < 0)  
+	inst->audio_dev = SDL_OpenAudioDevice(NULL, 0, &wanted_spec, &spec, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE | SDL_AUDIO_ALLOW_CHANNELS_CHANGE);
+	if( !inst->audio_dev )  
 	{  
 		printf("SDL_OpenAudio: %s/n", SDL_GetError());  
 		return -1;  
 	}  
-	SDL_PauseAudio(0);
+    SDL_PauseAudioDevice(inst->audio_dev, 0);
 
 	return 0;
 }

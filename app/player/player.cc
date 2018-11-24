@@ -51,7 +51,7 @@ typedef struct
 	void* rescalehandle;
 	void* resamplehandle;
 
-	int fps;
+	int fps;	
 }playerdesc_t;
 
 void AudioCallback(void *userdata, uint8_t *stream, int len)
@@ -61,36 +61,42 @@ void AudioCallback(void *userdata, uint8_t *stream, int len)
 	int length=len;
 	int iFilledSize=0;
 //	printf("AudioCallback len=%u\n",len);
+
+	memset(stream,0,len);
+ 
+//	SDL_MixAudio(stream, audio_pos, len, SDL_MIX_MAXVOLUME);
+
 	while( length>0 )
 	{
 		pVideoState->audiomutex.lock();
-		if( !pVideoState->queueAudioFrame.empty() )
+
+		if( pVideoState->queueAudioFrame.empty() )
 		{
-			PACKETINFO *pPacket = &pVideoState->queueAudioFrame.front();
-			double dClock=ffmpegdemux_getclock(pVideoState->demuxhandle, pPacket->streamid, pPacket->ipts);
-			pVideoState->lfAudioClock=dClock;
+			pVideoState->audiomutex.unlock();
+//			usleep(1);
+			continue;
+		}
+
+		PACKETINFO *pPacket = &pVideoState->queueAudioFrame.front();
+		double dClock=ffmpegdemux_getclock(pVideoState->demuxhandle, pPacket->streamid, pPacket->ipts);
+		pVideoState->lfAudioClock=dClock;
 //			printf("Audio Clock=%lf %lf %d %d \n",pVideoState->lfAudioClock, dClock, pPacket->streamid, pPacket->ipts);
 
-			int iPacketSize=pPacket->iSize-pPacket->iUsage;
-			int len1=length-iPacketSize;
-			if( len1>=0 )
-			{
-				memcpy(pBuf,pPacket->data+pPacket->iUsage,iPacketSize);
-				pBuf+=iPacketSize;
-				pVideoState->queueAudioFrame.pop_front();
-			}
-			else if( len1<0 )
-			{
-				memcpy(pBuf,pPacket->data+pPacket->iUsage,length);
-				pPacket->iUsage+=length;
-			}
-			length=len1;
-		}
-		else
+		int iPacketSize=pPacket->iSize-pPacket->iUsage;
+		int len1=length-iPacketSize;
+		if( len1>=0 )
 		{
-//			printf("AudioCallback set zero \n");
-			memset(stream,0,len);
+			memcpy(pBuf,pPacket->data+pPacket->iUsage,iPacketSize);
+			pBuf+=iPacketSize;
+			pVideoState->queueAudioFrame.pop_front();
 		}
+		else if( len1<0 )
+		{
+			memcpy(pBuf,pPacket->data+pPacket->iUsage,length);
+			pPacket->iUsage+=length;
+		}
+		length=len1;			
+
 		pVideoState->audiomutex.unlock();
 
 	}
@@ -133,6 +139,8 @@ int VideoThread(void *arg)
 			{
 				if( !pVideoState->rescalehandle )
 				{
+					pVideoState->fps += PLAYER_FRAMERATE_BASE;
+
 					pVideoState->rescalehandle = scale_open(frame.info.image.width, frame.info.image.height, frame.info.image.pix_fmt);
 					if( sdlplay_set_video(pVideoState->sdlhandle, "wwl", frame.info.image.width, frame.info.image.height) < 0 )
 					{
@@ -164,7 +172,7 @@ void* player_open()
 	inst->lfVideoClock=0.0;
 	inst->lfAudioClock=0.0;
 	inst->resamplehandle = inst->rescalehandle = NULL;
-	inst->fps = PLAYER_FRAMERATE_BASE;
+	inst->fps = 0;
 
 	return inst;
 }
@@ -235,12 +243,14 @@ int player_play(void* handle, const char* url)
 			{
 				if( !resamplehandle )
 				{
-					resamplehandle = resample_open(frame.info.sample.channels, 
-						frame.info.sample.sample_fmt, frame.info.sample.sample_rate);
+					inst->fps += frame.info.sample.sample_rate / frame.info.sample.nb_samples;
+					resamplehandle = resample_open(frame.info.sample.channels, frame.info.sample.sample_fmt, 
+						frame.info.sample.sample_rate, frame.info.sample.nb_samples);
+
 					inst->resamplehandle = resamplehandle;
 
 					if( sdlplay_set_audio(inst->sdlhandle, frame.info.sample.sample_rate,
-						frame.info.sample.channels, handle, AudioCallback) < 0 )
+						2/*frame.info.sample.channels*/, handle, AudioCallback) < 0 )
 					{
 						printf("sdlplay_set_audio error\n");
 						return -1;
@@ -264,8 +274,8 @@ int player_play(void* handle, const char* url)
 			}
 		}
 
-//		usleep(10 * 1000);
-		usleep(1000 * 1000 / inst->fps);
+//		usleep(1000 * 1000);
+		usleep(1000 * 1000 / (inst->fps+5) );
 	}
 
 	//-------------------release resource

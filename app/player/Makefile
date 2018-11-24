@@ -41,6 +41,8 @@ clean:
 	clear
 	rm -rf $(OBJS) *.o $(PROGRAM)
 
+install:
+	cp -f $(PROGRAM) /e/nonsys/tools/video/
 #$(OBJS):%.o :%.c  先用$(OBJS)中的一项，比如foo.o: %.o : %.c  含义为:试着用%.o匹配foo.o。如果成功%就等于foo。如果不成功，  
 # Make就会警告，然后。给foo.o添加依赖文件foo.c(用foo替换了%.c里的%)  
 # 也可以不要下面的这个生成规则，因为下面的 include $(DEF)  就隐含了。此处为了明了，易懂。故留着  
