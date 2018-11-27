@@ -9,7 +9,7 @@
 #include "ffmpegdec.h"
 #include "ffmpegscale.h"
 #include "ffmpegresample.h"
-#include "sdlplay.h"
+#include "sdl2play.h"
 #include "player.h"
 
 #define AVCODEC_MAX_AUDIO_FRAME_SIZE 192000
