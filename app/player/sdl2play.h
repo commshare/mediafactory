@@ -23,8 +23,14 @@ int sdlplay_mutex_free(void *mutex);
 
 int sdlplay_cond_alloc(void **cond);
 int sdlplay_cond_wait(void *cond, void* mutex);
-int sdlplay_cond_wait_timeout(void *cond, void* mutex, int milliseconds);
+int sdlplay_cond_wait_timeout(void *cond, void* mutex, uint32_t milliseconds);
 int sdlplay_cond_signal(void *cond);
 int sdlplay_cond_free(void *cond);
+
+int sdlplay_sem_alloc(void **sem, uint32_t initial_value);
+int sdlplay_sem_wait(void *sem);
+int sdlplay_sem_wait_timeout(void *sem, uint32_t milliseconds);
+int sdlplay_sem_post(void *sem);
+int sdlplay_sem_free(void *sem);
 
 #endif

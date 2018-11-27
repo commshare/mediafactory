@@ -233,7 +233,7 @@ int sdlplay_cond_wait(void *cond, void* mutex)
     SDL_CondWait(wait_cond, wait_mutex);
     return 0;
 }
-int sdlplay_cond_wait_timeout(void *cond, void* mutex, int milliseconds)
+int sdlplay_cond_wait_timeout(void *cond, void* mutex, uint32_t milliseconds)
 {
 	if( !cond)
 		return -1;
@@ -262,5 +262,58 @@ int sdlplay_cond_free(void *cond)
 	SDL_cond *wait_cond = (SDL_cond*)cond;
 
     SDL_DestroyCond(wait_cond);
+    return 0;
+}
+////////////////////////////////////////
+int sdlplay_sem_alloc(void **sem, uint32_t initial_value)
+{
+	SDL_sem *wait_sem = SDL_CreateSemaphore(initial_value);
+	if( !wait_sem )
+	{
+		printf("SDL_CreateSemaphore error: %s\n", SDL_GetError());
+		return -1;
+	}
+
+	*sem = wait_sem;
+    return 0;
+}
+int sdlplay_sem_wait(void *sem)
+{
+	if( !sem)
+		return -1;
+
+	SDL_sem *wait_sem = (SDL_sem*)sem;
+
+    SDL_SemWait(wait_sem);
+    return 0;
+}
+int sdlplay_sem_wait_timeout(void *sem, uint32_t milliseconds)
+{
+	if( !sem)
+		return -1;
+
+	SDL_sem *wait_sem = (SDL_sem*)sem;
+
+    SDL_SemWaitTimeout(wait_sem, milliseconds);
+    return 0;
+}
+int sdlplay_sem_post(void *sem)
+{
+	if( !sem)
+		return -1;
+	
+	SDL_sem *wait_sem = (SDL_sem*)sem;
+
+    SDL_SemPost(wait_sem);
+    return 0;
+}
+int sdlplay_sem_free(void *sem)
+{
+	if( !sem)
+		return -1;
+	
+	SDL_sem *wait_sem = (SDL_sem*)sem;
+
+    SDL_DestroySemaphore(wait_sem);
     return 0;
 }
